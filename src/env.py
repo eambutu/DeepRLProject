@@ -9,15 +9,23 @@ import math
 
 from state import State
 
+ENV_UPPER = math.sqrt(2)
+ENV_LOWER = -math.sqrt(2)
+ENV_SIDE = ENV_UPPER - ENV_LOWER
+
+BOUND_UPPER = 1
+BOUND_LOWER = -1
+BOUND_SIDE = BOUND_UPPER - BOUND_LOWER
+
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 RENDER_WIDTH = 400
 RENDER_HEIGHT = 400
-
-RENDER_AGENT_SIZE = 20
+RENDER_AGENT_SIZE = 4
 
 
 class MagnetsEnv(Env):
@@ -103,16 +111,26 @@ class MagnetsEnv(Env):
         self.state.print_state()
 
     def _render_object(self, draw, obj, color):
-        env_side = 2*math.sqrt(2)
-        env_lower = -math.sqrt(2)
-        obj_x = int(((obj.pos[0] - env_lower) / env_side)*RENDER_WIDTH)
-        obj_y = int(((obj.pos[1] - env_lower) / env_side)*RENDER_HEIGHT)
+        obj_x = int(((obj.pos[0] - ENV_LOWER) / ENV_SIDE)*RENDER_WIDTH)
+        obj_y = int(((obj.pos[1] - ENV_LOWER) / ENV_SIDE)*RENDER_HEIGHT)
         draw.arc(
             [obj_x - RENDER_AGENT_SIZE/2, obj_y - RENDER_AGENT_SIZE/2,
              obj_x + RENDER_AGENT_SIZE/2, obj_y + RENDER_AGENT_SIZE/2],
-            0, 359,
+            0, 360,
             fill=color
         )
+
+    def _render_objective(self, draw, color):
+        BOUND_X = (BOUND_SIDE/ENV_SIDE)*RENDER_WIDTH/2
+        BOUND_Y = (BOUND_SIDE/ENV_SIDE)*RENDER_HEIGHT/2
+        draw.rectangle(
+            [RENDER_WIDTH/2 + BOUND_X, RENDER_HEIGHT/2 + BOUND_Y,
+             RENDER_WIDTH/2 - BOUND_X, RENDER_HEIGHT/2 - BOUND_Y],
+            outline=color
+        )
+
+    def _render_bounds(self, draw, color):
+        draw.arc([0, 0, RENDER_WIDTH, RENDER_HEIGHT], 0, 360, fill=color)
 
     def _render(self, mode='human', close=False):
         if (self.viewer is None):
@@ -127,6 +145,8 @@ class MagnetsEnv(Env):
             agent = self.state.agent_states[i]
             self._render_object(draw, agent, RED)
         self._render_object(draw, self.state.target_state, BLUE)
+        self._render_objective(draw, GREEN)
+        self._render_bounds(draw, BLACK)
         del draw
 
         self.viewer.imshow(np.asarray(img))
