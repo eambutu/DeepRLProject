@@ -26,24 +26,27 @@ def getchar():
    return ch
 
 key2action = {
-    'w': [0, 8, 8],
-    'd': [2, 8, 8],
-    's': [4, 8, 8],
-    'a': [6, 8, 8],
+    ' ': [8, 8, 8],
 
-    'i': [8, 0, 8],
-    'l': [8, 2, 8],
-    'k': [8, 4, 8],
-    'j': [8, 6, 8],
+    'w': [6, 8, 8],
+    'a': [4, 8, 8],
+    's': [2, 8, 8],
+    'd': [0, 8, 8],
 
-    'KEY_UP': [8, 8, 0],
-    'KEY_RIGHT': [8, 8, 2],
-    'KEY_DOWN': [8, 8, 4],
-    'KEY_LEFT': [8, 8, 6]
+    'i': [8, 6, 8],
+    'j': [8, 4, 8],
+    'k': [8, 2, 8],
+    'l': [8, 0, 8],
+
+    'KEY_UP':   [8, 8, 6],
+    'KEY_LEFT': [8, 8, 4],
+    'KEY_DOWN': [8, 8, 2],
+    'KEY_RIGHT':[8, 8, 0],
 }
 
 if __name__ == '__main__':
     env = MagnetsEnv(num_agents=3)
+    env.render()
     while (True):
         key = getchar()
         env.step(key2action[key])
