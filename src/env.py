@@ -6,7 +6,7 @@ import numpy as np
 import time
 import math
 
-from state import State, ObjState
+from state import State
 
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
@@ -23,8 +23,8 @@ class MagnetsEnv(Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, G_const=1.0, acceleration=30.0, time_step=0.01,
-                time_limit=10, speed_limit=7.0, seed=None, boundary_less=-1,
-                boundary_greater=1, num_agents=3):
+                 time_limit=10, speed_limit=7.0, seed=None, boundary_less=-1,
+                 boundary_greater=1, num_agents=3):
         ''' constants '''
         self.G_const = G_const
         self.acceleration = acceleration
@@ -77,7 +77,7 @@ class MagnetsEnv(Env):
             acc_dir = np.zeros(2)
             if (action[i] != 8):
                 acc_dir = np.asarray([math.cos((action[i] * math.pi) / 4),
-                    math.sin((action[i] * math.pi) / 4)])
+                                     math.sin((action[i] * math.pi) / 4)])
             vel_inc = self.acceleration * acc_dir * self.time_step
             self.state.agent_states[i].vel += vel_inc
 
