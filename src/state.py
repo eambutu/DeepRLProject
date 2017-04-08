@@ -18,8 +18,6 @@ class State:
         angles = (2.0 * math.pi / num_agents) * np.random.rand(num_agents)
         self.agent_states = []
 
-        print("Type of angles is: ", type(angles))
-
         for i in range(num_agents):
             angles[i] += (i * 2.0 * math.pi) / num_agents
             pos_x = rads[i] * math.cos(angles[i])
@@ -32,9 +30,9 @@ class State:
     def in_box(self):
         if (self.target_state.pos[0] ** 2 >= 1\
                 or self.target_state.pos[1] ** 2 >= 1):
-            return False
-        else:
             return True
+        else:
+            return False
 
     def print_state(self):
         print("Target position:", self.target_state.pos)

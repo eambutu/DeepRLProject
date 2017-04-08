@@ -21,8 +21,8 @@ RENDER_AGENT_SIZE = 20
 class MagnetsEnv(Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, G_const=1.0, acceleration=1.0, time_step=0.01,
-                time_limit=10, speed_limit=1.0, seed=None, boundary_less = -1,
+    def __init__(self, G_const=1.0, acceleration=30.0, time_step=0.01,
+                time_limit=10, speed_limit=7.0, seed=None, boundary_less = -1,
                 boundary_greater = 1, num_agents = 3):
         ''' constants '''
         self.G_const = G_const
