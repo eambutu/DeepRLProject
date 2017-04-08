@@ -17,7 +17,7 @@ class State:
         rads = math.sqrt(2) * np.random.rand(num_agents)
         angles = (2.0 * math.pi / num_agents) * np.random.rand(num_agents)
         self.agent_states = []
-        
+
         print("Type of angles is: ", type(angles))
 
         for i in range(num_agents):
