@@ -1,5 +1,6 @@
 from gym import Env
-from gym.envs.registration import register
+# from gym.envs.registration import register
+# use the above later
 
 from PIL import Image, ImageDraw
 import numpy as np
@@ -23,14 +24,15 @@ class MagnetsEnv(Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, G_const=1.0, acceleration=30.0, time_step=0.01,
-                 time_limit=10, speed_limit=7.0, seed=None, boundary_less=-1,
-                 boundary_greater=1, num_agents=3):
+                 time_limit=10, speed_limit=100.0, friction=10.0, seed=None,
+                 boundary_less=-1, boundary_greater=1, num_agents=3):
         ''' constants '''
         self.G_const = G_const
         self.acceleration = acceleration
         self.time_step = time_step
         self.time_limit = time_limit
         self.speed_limit = speed_limit
+        self.friction = friction
         if (seed is None):
             self.seed = int(time.time())
         else:
@@ -60,7 +62,7 @@ class MagnetsEnv(Env):
             dist_square = (diff_i[0] * diff_i[0]) + (diff_i[1] * diff_i[1])
             total_acc += (self.G_const / dist_square) *\
                 (diff_i / math.sqrt(dist_square))
-            self.state.agent_states[i].pos += (self.state.agent_states[i].vel *\
+            self.state.agent_states[i].pos += (self.state.agent_states[i].vel *
                                                self.time_step)
             agent_dist = self.state.agent_states[i].pos[0] ** 2 +\
                 self.state.agent_states[i].pos[1] ** 2
@@ -79,7 +81,9 @@ class MagnetsEnv(Env):
                 acc_dir = np.asarray([math.cos((action[i] * math.pi) / 4),
                                      math.sin((action[i] * math.pi) / 4)])
             vel_inc = self.acceleration * acc_dir * self.time_step
-            self.state.agent_states[i].vel += vel_inc
+            vel_dec = self.friction * self.state.agent_states[i].vel *\
+                self.time_step
+            self.state.agent_states[i].vel += (vel_inc - vel_dec)
 
             ''' velocity might be greater than max speed: check for that
                 and clip velocity to max speed '''
