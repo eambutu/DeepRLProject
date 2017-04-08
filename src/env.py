@@ -49,20 +49,25 @@ class MagnetsEnv(Env):
 
         self.state.target_state.vel += (total_acc * self.time_step)
 
-        ''' update velocities based on acceleration '''
+        ''' update velocities of agents based on acceleration '''
         for i in range(self.num_agents):
+            ''' acceleration has constant magnitude and one of 8 directions '''
             acc_dir = np.zeros(2)
             if (action[i] != 8):
                 acc_dir = np.asarray([math.cos((i * math.pi) / 4),
                     math.sin((i * math.pi) / 4)])
             vel_inc = self.acceleration * acc_dir * self.time_step
             self.state.agent_states[i].vel += vel_inc
+
+            ''' velocity might be greater than max speed: check for that
+                and clip velocity to max speed '''
             vel_mag = self.state.agent_states[i].vel[0] ** 2 +\
                       self.state.agent_states[i].vel[1] ** 2
             if (vel_mag > self.speed_limit):
                 self.state.agent_states[i].vel /= vel_mag
                 self.state.agent_states[i].vel *= self.speed_limit
 
+        ''' checking if the game has ended so can return '''
         if (not self.state.in_box()):
             return self.state, 0, True, {"Msg": "Game over"}
 
