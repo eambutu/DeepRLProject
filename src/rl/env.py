@@ -7,7 +7,7 @@ import numpy as np
 import time
 import math
 
-from state import State
+from rl.state import State
 
 ENV_UPPER = math.sqrt(2)
 ENV_LOWER = -math.sqrt(2)
@@ -29,7 +29,7 @@ RENDER_AGENT_SIZE = 4
 
 
 class MagnetsEnv(Env):
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self, G_const=1.0, acceleration=30.0, time_step=0.01,
                  time_limit=10, speed_limit=100.0, friction=10.0, seed=None,
@@ -53,6 +53,7 @@ class MagnetsEnv(Env):
         self.num_steps = 0
         self.state = State(num_agents, seed)
 
+        self.spec = None
         self.viewer = None
 
     def _reset(self):
@@ -133,11 +134,6 @@ class MagnetsEnv(Env):
         draw.arc([0, 0, RENDER_WIDTH, RENDER_HEIGHT], 0, 360, fill=color)
 
     def _render(self, mode='human', close=False):
-        if (self.viewer is None):
-            # don't import SimpleImageViewer by default because even importing
-            # it requires a display
-            from gym.envs.classic_control.rendering import SimpleImageViewer
-            self.viewer = SimpleImageViewer()
 
         img = Image.new('RGB', (RENDER_HEIGHT, RENDER_WIDTH), WHITE)
         draw = ImageDraw.Draw(img)
@@ -149,7 +145,15 @@ class MagnetsEnv(Env):
         self._render_bounds(draw, BLACK)
         del draw
 
-        self.viewer.imshow(np.asarray(img))
+        if mode == 'human':
+            if (self.viewer is None):
+                # don't import SimpleImageViewer by default because even importing
+                # it requires a display
+                from gym.envs.classic_control.rendering import SimpleImageViewer
+                self.viewer = SimpleImageViewer()
+            self.viewer.imshow(np.asarray(img))
+        elif mode == 'rgb_array':
+            return np.asarray(img)
 
 
 def main():
