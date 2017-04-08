@@ -75,8 +75,8 @@ class MagnetsEnv(Env):
             ''' acceleration has constant magnitude and one of 8 directions '''
             acc_dir = np.zeros(2)
             if (action[i] != 8):
-                acc_dir = np.asarray([math.cos((i * math.pi) / 4),
-                    math.sin((i * math.pi) / 4)])
+                acc_dir = np.asarray([math.cos((action[i] * math.pi) / 4),
+                    math.sin((action[i] * math.pi) / 4)])
             vel_inc = self.acceleration * acc_dir * self.time_step
             self.state.agent_states[i].vel += vel_inc
 
