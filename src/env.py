@@ -91,9 +91,9 @@ class MagnetsEnv(Env):
 
         ''' checking if the game has ended so can return '''
         if (not self.state.in_box()):
-            return self.state, 0, False, {"Msg": "Game over"}
+            return self.state, 0, True, {"Msg": "Game over"}
 
-        return self.state.state_to_array(), 1, True, {"Msg": "Game not over"}
+        return self.state.state_to_array(), 1, False, {"Msg": "Game not over"}
 
     def print_state(self):
         self.state.print_state()
