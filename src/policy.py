@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class GreedyPolicy:
     def select_action(self, q_values):
         return np.argmax(q_values)

@@ -1,10 +1,12 @@
 import math
 import numpy as np
 
+
 class ObjState:
     def __init__(self, position, velocity):
         self.pos = position
         self.vel = velocity
+
 
 class State:
     def __init__(self, num_agents, seed=29):
@@ -30,7 +32,7 @@ class State:
             self.agent_states.append(agent_state)
 
     def in_box(self):
-        if (self.target_state.pos[0] ** 2 >= 1\
+        if (self.target_state.pos[0] ** 2 >= 1
                 or self.target_state.pos[1] ** 2 >= 1):
             return False
         else:
@@ -45,9 +47,26 @@ class State:
             print("Agent", i, "position:", self.agent_states[i].pos)
             print("Agent", i, "velocity:", self.agent_states[i].vel)
 
+    def state_to_array(self):
+        """
+        Returns the array representation:
+        [target_pos[0], target_pos[1], target_vel[0], target_vel[1],
+         agent1_pos1[0], agent1_pos2[0], agent1_vel[0], agent1_vel[1], ...]
+        """
+        state_array = np.concatenate([self.target_state.pos,
+                                      self.target_state.vel])
+        for i in range(self.num_agents):
+            state_array = np.concatenate([state_array,
+                                          self.agent_states[i].pos,
+                                          self.agent_states[i].vel])
+        return state_array
+
+
 def main():
     test_state = State(3, 29)
     test_state.print_state()
+    print(test_state.state_to_array())
+
 
 if __name__ == '__main__':
     main()

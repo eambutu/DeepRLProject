@@ -1,14 +1,16 @@
 import numpy as np
 
+
 class Sample:
     """Stores a tuple of (s, a, r, s', terminal).
 
     Parameters
     ---------
-    state: instance of State
+    state: numpy float64 array
+       in format [target_x, target_y, target_vx, target_vy, agent1_x, ...]
     action: int array
     reward: int
-    next_state: instance of State
+    next_state: numpy float64 array of format above
     is_terminal: boolean
     """
     def __init__(self, cur_state, action, reward, next_state, is_terminal):
@@ -57,10 +59,12 @@ class ReplayMemory:
         sample_idxs = np.random.randint(1, len(self.states) - 1, batch_size)
 
         for i in range(batch_size):
-            idx = (sample_idxs[i] + (self.index % len(self.states))) % self.max_size
-            if self.terminal[(idx - 1) % self.max_size]:
+            idx = (sample_idxs[i] + (self.index % len(self.states)))\
+                    % self.max_size
+            while self.terminal[(idx - 1) % self.max_size]:
                 rand_idx = np.random.randint(1, len(self.states - 1))
-                idx = (rand_idx + (self.index % len(self.states))) % self.max_size
+                idx = (rand_idx + (self.index % len(self.states)))\
+                    % self.max_size
 
             sample = Sample(self.states[(idx - 1) % self.max_size],
                             self.actions[idx], self.rewards[idx],
