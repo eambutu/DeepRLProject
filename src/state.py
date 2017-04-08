@@ -29,6 +29,13 @@ class State:
             agent_state = ObjState(agent_pos, agent_vel)
             self.agent_states.append(agent_state)
 
+    def in_box(self):
+        if (self.target_state.pos[0] ** 2 >= 1\
+                or self.target_state.pos[1] ** 2 >= 1):
+            return False
+        else:
+            return True
+
     def print_state(self):
         print("Target position:", self.target_state.pos)
         print("Target velocity:", self.target_state.vel)
