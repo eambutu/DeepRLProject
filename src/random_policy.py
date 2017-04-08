@@ -12,4 +12,4 @@ if __name__ == '__main__':
             action = [randint(0, 8), randint(0, 8), randint(0, 8)]
             _, _, is_terminal, _ = env.step(action)
             env.render()
-            sleep(0.1)
+            sleep(0.01)
