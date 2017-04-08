@@ -81,7 +81,7 @@ def on_release(key):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--timestep', type=float, default=0.1,
+    parser.add_argument('--timestep', type=float, default=0.01,
                         help='time to spend in between simulation steps')
     parser.add_argument('--sim_G', type=float, default=None,
                         help='simulation gravitational constant')
