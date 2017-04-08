@@ -32,9 +32,9 @@ class State:
     def in_box(self):
         if (self.target_state.pos[0] ** 2 >= 1
                 or self.target_state.pos[1] ** 2 >= 1):
-            return True
-        else:
             return False
+        else:
+            return True
 
     def print_state(self):
         print("Target position:", self.target_state.pos)
