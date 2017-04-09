@@ -16,7 +16,8 @@ class State:
 
         self.num_agents = num_agents
         np.random.seed(seed)
-        rads = math.sqrt(2) * np.random.rand(num_agents)
+        rads = (math.sqrt(2) - 0.3) * np.random.rand(num_agents) +\
+            (0.3 * np.ones(num_agents))
         angles = (2.0 * math.pi / num_agents) * np.random.rand(num_agents)
         self.agent_states = []
 
