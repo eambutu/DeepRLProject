@@ -58,6 +58,7 @@ class DQNAgent:
                  target_update_interval=TARGET_UPDATE_INTERVAL,
                  train_interval=TRAIN_INTERVAL,
                  batch_size=BATCH_SIZE,
+                 report_interval=REPORT_INTERVAL,
                  model_name='dqn'):
         """
         Initialize a DQN Agent
@@ -84,6 +85,8 @@ class DQNAgent:
         batch_size: int
             the number of experiences to sample from replay memory during a
             training step
+        report_interval: int
+            interval at which to generate progress reports during training
 
         returns: rl.dqn.DQNAgent
             the initialized dqn agent
@@ -98,6 +101,7 @@ class DQNAgent:
         self.target_update_interval = target_update_interval
         self.train_interval = train_interval
         self.batch_size = batch_size
+        self.report_interval = report_interval
 
         self.model_name = model_name
         self.save_dir = './%s' % model_name
@@ -213,7 +217,7 @@ class DQNAgent:
                             saver.save(sess, "%s/model" % self.save_dir,
                                        global_step=n_samples-self.num_burn_in)
 
-                    if (n_samples % REPORT_INTERVAL == 0):
+                    if (n_samples % self.report_interval == 0):
                         avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
                         print("reward/episode since last report: %f" % avg_reward)
                         print(self.metric_str % tuple(self.latest_metrics))
