@@ -9,7 +9,7 @@ from rl.dqn import DQNAgent
 from rl.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy
 
 TRAIN_STEPS = 5000000
-TEST_STEPS = 20
+TEST_STEPS = 100
 
 EPSILON_START = 1.0
 EPSILON_END = 0.05
@@ -17,7 +17,7 @@ EPSILON_STEPS = 1000000
 
 
 def q_model(x, n):
-    return tflearn.fully_connected(x, n, activation='relu')
+    return tflearn.fully_connected(x, n)
 
 
 if __name__ == '__main__':
@@ -27,6 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='dqn', type=str, help='name of model')
     parser.add_argument('--run', default=False, action='store_true', help='evaluate model')
     parser.add_argument('--train', default=False, action='store_true', help='train model')
+    parser.add_argument('--iterations', default=None, type=int,
+                        help='when evaluating, use the model trained for this many iterations')
 
     args = parser.parse_args()
 
@@ -43,4 +45,5 @@ if __name__ == '__main__':
     if (args.train):
         agent.train(train_policy, TRAIN_STEPS)
     if (args.run):
-        agent.evaluate(test_policy, TEST_STEPS)
+        (m, v) = agent.evaluate(test_policy, TEST_STEPS, args.iterations)
+        print("mean: %f, variance: %f" % (m, v))

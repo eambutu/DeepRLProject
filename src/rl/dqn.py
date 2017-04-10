@@ -125,7 +125,7 @@ class DQNAgent:
 
     def _calc_q(self, ns, r, t):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
-        return r + (1-t)*self.gamma*nq.max()
+        return r + (1-t)*self.gamma*nq.max(axis=-1)
 
     def _select_action(self, s, policy):
         s = np.expand_dims(s, axis=0)
@@ -171,12 +171,11 @@ class DQNAgent:
             sess.run(init_op)
 
             n_samples = 0
+            n_episodes = 0
             episode_reward = 0  # keep track of this to see if we are learning
             while (n_samples <= max_samples + self.num_burn_in):
                 state = self.env.reset()
                 is_terminal = False
-                last_episode_reward = episode_reward
-                episode_reward = 0
                 while (not is_terminal):
                     action = self._select_action(state, policy)
                     next_state, reward, is_terminal, _ = self.env.step(action)
@@ -200,12 +199,16 @@ class DQNAgent:
                             saver.save(sess, "%s/model" % self.save_dir,
                                        global_step=n_samples-self.num_burn_in)
                     if (n_samples % REPORT_INTERVAL == 0):
-                        print("last episode reward: %d" % last_episode_reward)
+                        avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
+                        print("reward/episode since last report: %f" % avg_reward)
                         print("%d iterations complete" % n_samples)
+                        n_episodes = 0
+                        episode_reward = 0
                     n_samples += 1
                     state = next_state
+                n_episodes += 1
 
-    def evaluate(self, policy, num_episodes):
+    def evaluate(self, policy, num_episodes, iterations=None):
         """
         Evaluate the DQN Agent
 
@@ -221,10 +224,15 @@ class DQNAgent:
         returns: (float, float)
             the mean and variance of the agent's rewards/episode
         """
+        if (iterations is None):
+            checkpoint = tf.train.latest_checkpoint(self.save_dir)
+        else:
+            checkpoint = "%s/model-%d" % (self.save_dir, iterations)
+
         saver = tf.train.Saver(max_to_keep=None)
         with tf.Session() as sess:
             self.sess = sess
-            saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
+            saver.restore(sess, checkpoint)
 
             samples = []
             for i in range(num_episodes):
