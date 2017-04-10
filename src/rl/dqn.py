@@ -111,19 +111,24 @@ class DQNAgent:
             self.train_a = tf.placeholder(tf.float32, (None, env.action_space.n))
             self.train_y = tf.placeholder(tf.float32, (None,))
             self.train_q = self.q_network(self.train_s, env.action_space.n)
-            cost = self.loss(tf.reduce_sum(tf.multiply(self.train_q, self.train_a)) - self.train_y)
+            cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
             self.optimize_op = self.optimizer.minimize(cost)
             train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
+            avg_q = tf.reduce_mean(self.train_q)
 
         with tf.variable_scope("target_network"):
             self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
             self.target_q = self.q_network(self.target_s, env.action_space.n)
             target_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="target_network")
             self.target_update_op = [
-                target_vars[i].assign(train_vars[i]) for i in range(len(target_vars))
+                tf.assign(target_vars[i], train_vars[i]) for i in range(len(target_vars))
             ]
 
-    def _calc_q(self, ns, r, t):
+        self.metrics = [cost, avg_q]
+        self.latest_metrics = [0.0, 0.0]
+        self.metric_str = "loss: %f, average q value: %f"
+
+    def _calc_q_update(self, ns, r, t):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
         return r + (1-t)*self.gamma*nq.max(axis=-1)
 
@@ -134,6 +139,13 @@ class DQNAgent:
 
     def _train_step(self, s, a, y):
         self.sess.run(self.optimize_op, feed_dict={
+            self.train_s: s,
+            self.train_a: a,
+            self.train_y: y,
+        })
+
+    def _calc_metrics(self, s, a, y):
+        return self.sess.run(self.metrics, feed_dict={
             self.train_s: s,
             self.train_a: a,
             self.train_y: y,
@@ -187,23 +199,29 @@ class DQNAgent:
                         reward=reward,
                         is_terminal=is_terminal
                     ))
+
                     if (n_samples > self.num_burn_in):
                         if (n_samples % self.train_interval == 0):
                             batch = self.memory.sample(self.batch_size)
                             (b_s, b_a, b_ns, b_r, b_t) = \
                                 process_samples(batch, self.env.action_space.n)
-                            b_y = self._calc_q(b_ns, b_r, b_t)
+                            b_y = self._calc_q_update(b_ns, b_r, b_t)
                             self._train_step(b_s, b_a, b_y)
+                            self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
                         if (n_samples % self.target_update_interval == 0):
                             self._sync_target_network()
                             saver.save(sess, "%s/model" % self.save_dir,
                                        global_step=n_samples-self.num_burn_in)
+
                     if (n_samples % REPORT_INTERVAL == 0):
                         avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
                         print("reward/episode since last report: %f" % avg_reward)
-                        print("%d iterations complete" % n_samples)
+                        print(self.metric_str % tuple(self.latest_metrics))
+                        print("%d iterations sampled" % n_samples)
+                        print("")
                         n_episodes = 0
                         episode_reward = 0
+
                     n_samples += 1
                     state = next_state
                 n_episodes += 1
