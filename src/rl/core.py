@@ -59,11 +59,10 @@ class ReplayMemory:
 
     def sample(self, batch_size):
         samples = []
-        sample_idxs = np.random.randint(1, len(self.states) - 1, batch_size)
+        sample_idxs = np.random.randint(0, len(self.states), batch_size)
 
         for i in range(batch_size):
-            idx = (sample_idxs[i] + (self.index % len(self.states)))\
-                    % self.max_size
+            idx = sample_idxs[i]
 
             sample = Sample(self.cur_states[idx], self.actions[idx],
                             self.rewards[idx], self.next_states[idx],
