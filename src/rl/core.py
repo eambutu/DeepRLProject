@@ -63,10 +63,12 @@ class ReplayMemory:
 
         for i in range(batch_size):
             idx = sample_idxs[i]
-
             sample = Sample(self.cur_states[idx], self.actions[idx],
                             self.rewards[idx], self.next_states[idx],
                             self.terminal[idx])
             samples.append(sample)
 
         return samples
+
+    def __len__(self):
+        return len(self.states)

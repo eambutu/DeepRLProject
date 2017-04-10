@@ -1,11 +1,12 @@
-from gym import Env
-# from gym.envs.registration import register
-# use the above later
-
-from PIL import Image, ImageDraw
-import numpy as np
 import time
 import math
+from collections import Iterable
+
+import numpy as np
+from gym import Env
+from gym.spaces import Discrete, Box
+from gym.envs.registration import register
+from PIL import Image, ImageDraw
 
 from rl.state import State
 
@@ -48,6 +49,9 @@ class MagnetsEnv(Env):
         self.boundary_greater = boundary_greater
         self.num_agents = num_agents
 
+        self.action_space = Discrete(num_agents * 8)
+        self.observation_space = Box(low=-speed_limit, high=speed_limit, shape=(4*(num_agents+1),))
+
         ''' variables that change with time '''
         self.num_steps = 0
         self.state = State(num_agents, seed)
@@ -57,9 +61,20 @@ class MagnetsEnv(Env):
 
     def _reset(self):
         self.__init__()
+        return self.state.to_array()
+
+    def _action_scal2vec(self, action):
+        vec_action = np.zeros(self.num_agents)
+        for i in range(self.num_agents):
+            vec_action[i] = action % 8
+            action /= 8
+        return vec_action
 
     def _step(self, action):
         ''' evolve the state  '''
+        if not isinstance(action, Iterable):  # if we didn't get a list of actions
+            action = self._action_scal2vec(action)
+
         self.num_steps += 1
         pos_inc = self.state.target_state.vel * self.time_step
         self.state.target_state.pos += pos_inc
@@ -97,7 +112,7 @@ class MagnetsEnv(Env):
         if (not self.state.in_box()):
             return self.state, 0, True, {"Msg": "Game over"}
 
-        return self.state.state_to_array(), 1, False, {"Msg": "Game not over"}
+        return self.state.to_array(), 1, False, {"Msg": "Game not over"}
 
     def print_state(self):
         self.state.print_state()
@@ -145,6 +160,12 @@ class MagnetsEnv(Env):
             self.viewer.imshow(np.asarray(img))
         elif mode == 'rgb_array':
             return np.asarray(img)
+
+
+register(
+    id='Magnets-v0',
+    entry_point='rl.env:MagnetsEnv',
+)
 
 
 def main():

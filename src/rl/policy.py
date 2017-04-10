@@ -48,3 +48,11 @@ class LinearDecayGreedyEpsilonPolicy:
                 return x
             else:
                 return np.random.randint(n)
+
+
+class UniformRandomPolicy:
+    def __init__(self):
+        return
+
+    def select_action(self, q_values):
+        return np.random.randint(len(q_values))
