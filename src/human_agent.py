@@ -91,6 +91,8 @@ if __name__ == '__main__':
                         help='time to spend in between simulation steps')
     parser.add_argument('--sim_timestep', type=float, default=None,
                         help='amount of time to simulate in a single simulation step')
+    parser.add_argument('--sim_nagents', type=int, default=None,
+                        help='number of players, between 1 and 3')
     args = parser.parse_args()
 
     env_kwargs = {}
@@ -102,16 +104,18 @@ if __name__ == '__main__':
         env_kwargs['friction'] = args.sim_friction
     if (args.sim_timestep is not None):
         env_kwargs['time_step'] = args.sim_timestep
+    if (args.sim_nagents is not None):
+        env_kwargs['num_agents'] = args.sim_nagents
 
     with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        env = MagnetsEnv(num_agents=3, **env_kwargs)
+        env = MagnetsEnv(**env_kwargs)
         env.render()
         while is_running:
             if (should_reset):
                 env.reset()
                 should_reset = False
             jslock.acquire(blocking=True)
-            action = joystick2action(joystick)
+            action = joystick2action(joystick)[:args.sim_nagents]
             jslock.release()
             env.step(action)
             env.render()

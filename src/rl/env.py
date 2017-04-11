@@ -1,11 +1,12 @@
-from gym import Env
-# from gym.envs.registration import register
-# use the above later
-
-from PIL import Image, ImageDraw
-import numpy as np
 import time
 import math
+from collections import Iterable
+
+import numpy as np
+from gym import Env
+from gym.spaces import Discrete, Box
+from gym.envs.registration import register
+from PIL import Image, ImageDraw
 
 from rl.state import State
 
@@ -48,19 +49,36 @@ class MagnetsEnv(Env):
         self.boundary_greater = boundary_greater
         self.num_agents = num_agents
 
+        self.action_space = Discrete(9**num_agents)
+
+        # It's unclear what low and high here should be. Set them to 0 so
+        # that if anyone tries to use them, it is more likely that obviously
+        # wrong things happen.
+        self.observation_space = Box(low=0, high=0, shape=(4*(num_agents+1),))
+
         ''' variables that change with time '''
-        self.num_steps = 0
         self.state = State(num_agents, seed)
 
         self.spec = None
         self.viewer = None
 
     def _reset(self):
-        self.__init__()
+        self.seed += 1
+        self.state = State(self.num_agents, self.seed)
+        return self.state.to_array()
+
+    def _action_scal2vec(self, action):
+        vec_action = np.zeros(self.num_agents)
+        for i in range(self.num_agents):
+            vec_action[i] = action % 9
+            action /= 9
+        return vec_action
 
     def _step(self, action):
         ''' evolve the state  '''
-        self.num_steps += 1
+        if not isinstance(action, Iterable):  # if we didn't get a list of actions
+            action = self._action_scal2vec(action)
+
         pos_inc = self.state.target_state.vel * self.time_step
         self.state.target_state.pos += pos_inc
         total_acc = np.zeros(2)
@@ -95,9 +113,9 @@ class MagnetsEnv(Env):
 
         ''' checking if the game has ended so can return '''
         if (not self.state.in_box()):
-            return self.state, 0, True, {"Msg": "Game over"}
+            return self.state.to_array(), 0, True, {"Msg": "Game over"}
 
-        return self.state.state_to_array(), 1, False, {"Msg": "Game not over"}
+        return self.state.to_array(), 1, False, {"Msg": "Game not over"}
 
     def print_state(self):
         self.state.print_state()
@@ -145,6 +163,24 @@ class MagnetsEnv(Env):
             self.viewer.imshow(np.asarray(img))
         elif mode == 'rgb_array':
             return np.asarray(img)
+
+
+register(
+    id='Magnets1-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 1, 'friction': 2.0}
+)
+
+register(
+    id='Magnets-v0',
+    entry_point='rl.env:MagnetsEnv',
+)
+
+register(
+    id='Magnets2-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 2}
+)
 
 
 def main():

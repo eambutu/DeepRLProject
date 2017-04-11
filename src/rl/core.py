@@ -43,7 +43,7 @@ class ReplayMemory:
         self.max_size = max_size
 
     def append(self, sample):
-        if (len(self.states) < self.max_size):
+        if (len(self.cur_states) < self.max_size):
             self.cur_states.append(sample.state)
             self.next_states.append(sample.next_state)
             self.rewards.append(sample.reward)
@@ -59,14 +59,16 @@ class ReplayMemory:
 
     def sample(self, batch_size):
         samples = []
-        sample_idxs = np.random.randint(0, len(self.states), batch_size)
+        sample_idxs = np.random.randint(0, len(self.cur_states), batch_size)
 
         for i in range(batch_size):
             idx = sample_idxs[i]
-
             sample = Sample(self.cur_states[idx], self.actions[idx],
                             self.rewards[idx], self.next_states[idx],
                             self.terminal[idx])
             samples.append(sample)
 
         return samples
+
+    def __len__(self):
+        return len(self.cur_states)

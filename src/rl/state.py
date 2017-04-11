@@ -46,7 +46,7 @@ class State:
             print("Agent", i, "position:", self.agent_states[i].pos)
             print("Agent", i, "velocity:", self.agent_states[i].vel)
 
-    def state_to_array(self):
+    def to_array(self):
         """
         Returns the array representation:
         [target_pos[0], target_pos[1], target_vel[0], target_vel[1],
@@ -64,7 +64,7 @@ class State:
 def main():
     test_state = State(3, 29)
     test_state.print_state()
-    print(test_state.state_to_array())
+    print(test_state.to_array())
 
 
 if __name__ == '__main__':
