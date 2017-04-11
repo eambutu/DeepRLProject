@@ -53,14 +53,14 @@ class MagnetsEnv(Env):
         self.observation_space = Box(low=-speed_limit, high=speed_limit, shape=(4*(num_agents+1),))
 
         ''' variables that change with time '''
-        self.num_steps = 0
         self.state = State(num_agents, seed)
 
         self.spec = None
         self.viewer = None
 
     def _reset(self):
-        self.__init__()
+        self.seed += 1
+        self.state = State(self.num_agents, self.seed)
         return self.state.to_array()
 
     def _action_scal2vec(self, action):
@@ -75,7 +75,6 @@ class MagnetsEnv(Env):
         if not isinstance(action, Iterable):  # if we didn't get a list of actions
             action = self._action_scal2vec(action)
 
-        self.num_steps += 1
         pos_inc = self.state.target_state.vel * self.time_step
         self.state.target_state.pos += pos_inc
         total_acc = np.zeros(2)
@@ -163,8 +162,20 @@ class MagnetsEnv(Env):
 
 
 register(
+    id='Magnets1-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 1, 'friction': 2.0}
+)
+
+register(
     id='Magnets-v0',
     entry_point='rl.env:MagnetsEnv',
+)
+
+register(
+    id='Magnets2-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 2}
 )
 
 
