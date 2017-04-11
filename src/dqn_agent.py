@@ -2,6 +2,7 @@
 import argparse
 
 import gym
+from gym.wrappers import Monitor
 import tflearn
 
 import rl.env # noqa : F401
@@ -30,6 +31,8 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='dqn', type=str, help='name of model')
     parser.add_argument('--run', default=False, action='store_true', help='evaluate model')
     parser.add_argument('--train', default=False, action='store_true', help='train model')
+    parser.add_argument('--monitor', default=False, action='store_true',
+                        help='use the gym monitor wrapper to monitor progress')
     parser.add_argument('--iterations', default=None, type=int,
                         help='when evaluating, use the model trained for this many iterations')
 
@@ -41,6 +44,9 @@ if __name__ == '__main__':
         exit(1)
 
     env = gym.make(args.env)
+    if (args.monitor):
+        env = Monitor(env, "%s/monitor" % args.name)
+
     agent = DQNAgent(env, q_model, model_name=args.name)
     train_policy = LinearDecayGreedyEpsilonPolicy(EPSILON_START, EPSILON_END, EPSILON_STEPS)
     test_policy = GreedyPolicy()
