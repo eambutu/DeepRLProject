@@ -32,14 +32,13 @@ class MagnetsEnv(Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self, G_const=1.0, acceleration=30.0, time_step=0.01,
-                 time_limit=10, speed_limit=100.0, friction=10.0, seed=None,
+                 time_limit=10, friction=10.0, seed=None,
                  boundary_less=-1, boundary_greater=1, num_agents=3):
         ''' constants '''
         self.G_const = G_const
         self.acceleration = acceleration
         self.time_step = time_step
         self.time_limit = time_limit
-        self.speed_limit = speed_limit
         self.friction = friction
         if (seed is None):
             self.seed = int(time.time())
@@ -93,14 +92,6 @@ class MagnetsEnv(Env):
             vel_dec = self.friction * self.state.agent_states[i].vel *\
                 self.time_step
             self.state.agent_states[i].vel += (vel_inc - vel_dec)
-
-            ''' velocity might be greater than max speed: check for that
-                and clip velocity to max speed '''
-            vel_mag = self.state.agent_states[i].vel[0] ** 2 +\
-                self.state.agent_states[i].vel[1] ** 2
-            if (vel_mag > self.speed_limit):
-                self.state.agent_states[i].vel /= vel_mag
-                self.state.agent_states[i].vel *= self.speed_limit
 
         ''' checking if the game has ended so can return '''
         if (not self.state.in_box()):
