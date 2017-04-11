@@ -50,7 +50,11 @@ class MagnetsEnv(Env):
         self.num_agents = num_agents
 
         self.action_space = Discrete(9**num_agents)
-        self.observation_space = Box(low=-speed_limit, high=speed_limit, shape=(4*(num_agents+1),))
+
+        # It's unclear what low and high here should be. Set them to 0 so
+        # that if anyone tries to use them, it is more likely that obviously
+        # wrong things happen.
+        self.observation_space = Box(low=0, high=0, shape=(4*(num_agents+1),))
 
         ''' variables that change with time '''
         self.state = State(num_agents, seed)
