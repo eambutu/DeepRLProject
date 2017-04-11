@@ -35,7 +35,8 @@ class ReplayMemory:
     """
     def __init__(self, max_size):
         self.index = 0
-        self.states = []
+        self.cur_states = []
+        self.next_states = []
         self.rewards = []
         self.actions = []
         self.terminal = []
@@ -43,12 +44,14 @@ class ReplayMemory:
 
     def append(self, sample):
         if (len(self.states) < self.max_size):
-            self.states.append(sample.state)
+            self.cur_states.append(sample.state)
+            self.next_states.append(sample.next_state)
             self.rewards.append(sample.reward)
             self.actions.append(sample.action)
             self.terminal.append(sample.is_terminal)
         else:
-            self.states[self.index] = sample.state
+            self.cur_states[self.index] = sample.state
+            self.next_states[self.index] = sample.next_state
             self.rewards[self.index] = sample.reward
             self.actions[self.index] = sample.action
             self.terminal[self.index] = sample.is_terminal
@@ -56,19 +59,14 @@ class ReplayMemory:
 
     def sample(self, batch_size):
         samples = []
-        sample_idxs = np.random.randint(1, len(self.states) - 1, batch_size)
+        sample_idxs = np.random.randint(0, len(self.states), batch_size)
 
         for i in range(batch_size):
-            idx = (sample_idxs[i] + (self.index % len(self.states)))\
-                    % self.max_size
-            while self.terminal[(idx - 1) % self.max_size]:
-                rand_idx = np.random.randint(1, len(self.states - 1))
-                idx = (rand_idx + (self.index % len(self.states)))\
-                    % self.max_size
+            idx = sample_idxs[i]
 
-            sample = Sample(self.states[(idx - 1) % self.max_size],
-                            self.actions[idx], self.rewards[idx],
-                            self.states[idx], self.terminal[idx])
+            sample = Sample(self.cur_states[idx], self.actions[idx],
+                            self.rewards[idx], self.next_states[idx],
+                            self.terminal[idx])
             samples.append(sample)
 
         return samples

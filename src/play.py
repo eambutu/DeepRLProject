@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 from pynput import keyboard
 
-from env import MagnetsEnv
+from rl.env import MagnetsEnv
 
 key2move = {
     'w': np.array([[0,  1], [0, 0], [0, 0]]),
