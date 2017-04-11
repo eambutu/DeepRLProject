@@ -1,7 +1,8 @@
+#!/usr/bin/env python
 from random import randint
 from time import sleep
 
-from env import MagnetsEnv
+from rl.env import MagnetsEnv
 
 if __name__ == '__main__':
     env = MagnetsEnv(num_agents=3)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from threading import Lock
 from time import sleep
 import argparse
