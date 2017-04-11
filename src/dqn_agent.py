@@ -11,13 +11,15 @@ from rl.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy
 TRAIN_STEPS = 5000000
 TEST_STEPS = 100
 
-EPSILON_START = 1.0
-EPSILON_END = 0.05
-EPSILON_STEPS = 1000000
+EPSILON_START = 0.5
+EPSILON_END = 0.01
+EPSILON_STEPS = 10000
 
 
 def q_model(x, n):
-    return tflearn.fully_connected(x, n)
+    h1 = tflearn.fully_connected(x, 20, activation='relu')
+    out = tflearn.fully_connected(h1, n)
+    return out
 
 
 if __name__ == '__main__':

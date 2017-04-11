@@ -6,13 +6,14 @@ import tensorflow as tf
 from rl.core import ReplayMemory, Sample
 
 # default hyperparameters
-GAMMA = 0.99
+GAMMA = 0.9
 ALPHA = 0.001
-NUM_BURN_IN = 50000
-TARGET_UPDATE_INTERVAL = 10000
-TRAIN_INTERVAL = BATCH_SIZE = 32
-MEMORY_SIZE = 1000000
-REPORT_INTERVAL = 10000
+NUM_BURN_IN = 32
+TARGET_UPDATE_INTERVAL = 1
+TRAIN_INTERVAL = 1
+BATCH_SIZE = 32
+MEMORY_SIZE = 10000
+REPORT_INTERVAL = 1000
 
 
 def one_hot(a, n):
@@ -187,6 +188,7 @@ class DQNAgent:
             sess.run(init_op)
 
             n_samples = 0
+            n_updates = 0
             n_episodes = 0
             episode_reward = 0  # keep track of this to see if we are learning
             while (n_samples <= max_samples + self.num_burn_in):
@@ -212,17 +214,18 @@ class DQNAgent:
                             b_y = self._calc_q_update(b_ns, b_r, b_t)
                             self._train_step(b_s, b_a, b_y)
                             self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
-                        if (n_samples % self.target_update_interval == 0):
-                            self._sync_target_network()
-                            saver.save(sess, "%s/model" % self.save_dir,
-                                       global_step=n_samples-self.num_burn_in)
+                            if (n_updates % self.target_update_interval == 0):
+                                self._sync_target_network()
+                            n_updates += 1
 
                     if (n_samples % self.report_interval == 0):
                         avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
                         print("reward/episode since last report: %f" % avg_reward)
                         print(self.metric_str % tuple(self.latest_metrics))
-                        print("%d iterations sampled" % n_samples)
+                        print("%d experiences sampled" % n_samples)
                         print("")
+                        saver.save(sess, "%s/model" % self.save_dir,
+                                   global_step=n_samples-self.num_burn_in)
                         n_episodes = 0
                         episode_reward = 0
 

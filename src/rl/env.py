@@ -49,7 +49,7 @@ class MagnetsEnv(Env):
         self.boundary_greater = boundary_greater
         self.num_agents = num_agents
 
-        self.action_space = Discrete(num_agents * 8)
+        self.action_space = Discrete(num_agents * 9)
         self.observation_space = Box(low=-speed_limit, high=speed_limit, shape=(4*(num_agents+1),))
 
         ''' variables that change with time '''
@@ -66,8 +66,8 @@ class MagnetsEnv(Env):
     def _action_scal2vec(self, action):
         vec_action = np.zeros(self.num_agents)
         for i in range(self.num_agents):
-            vec_action[i] = action % 8
-            action /= 8
+            vec_action[i] = action % 9
+            action /= 9
         return vec_action
 
     def _step(self, action):
@@ -110,7 +110,7 @@ class MagnetsEnv(Env):
 
         ''' checking if the game has ended so can return '''
         if (not self.state.in_box()):
-            return self.state, 0, True, {"Msg": "Game over"}
+            return self.state.to_array(), 0, True, {"Msg": "Game over"}
 
         return self.state.to_array(), 1, False, {"Msg": "Game not over"}
 
