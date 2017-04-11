@@ -49,7 +49,7 @@ class MagnetsEnv(Env):
         self.boundary_greater = boundary_greater
         self.num_agents = num_agents
 
-        self.action_space = Discrete(num_agents * 9)
+        self.action_space = Discrete(9**num_agents)
         self.observation_space = Box(low=-speed_limit, high=speed_limit, shape=(4*(num_agents+1),))
 
         ''' variables that change with time '''
