@@ -1,5 +1,6 @@
 import time
 import math
+from threading import Lock, get_ident
 from collections import Iterable
 
 import numpy as np
@@ -9,6 +10,7 @@ from gym.envs.registration import register
 from PIL import Image, ImageDraw
 
 from rl.state import State
+from rl.threshlock import ThreshLock
 
 ENV_UPPER = math.sqrt(2)
 ENV_LOWER = -math.sqrt(2)
@@ -59,7 +61,6 @@ class MagnetsEnv(Env):
         ''' variables that change with time '''
         self.state = State(num_agents, seed)
 
-        self.spec = None
         self.viewer = None
 
     def _reset(self):
@@ -143,7 +144,6 @@ class MagnetsEnv(Env):
         draw.arc([0, 0, RENDER_WIDTH, RENDER_HEIGHT], 0, 360, fill=color)
 
     def _render(self, mode='human', close=False):
-
         img = Image.new('RGB', (RENDER_HEIGHT, RENDER_WIDTH), WHITE)
         draw = ImageDraw.Draw(img)
         for i in range(self.num_agents):
@@ -165,11 +165,82 @@ class MagnetsEnv(Env):
             return np.asarray(img)
 
 
-register(
-    id='Magnets1-v0',
-    entry_point='rl.env:MagnetsEnv',
-    kwargs={'num_agents': 1, 'friction': 2.0}
-)
+class MultiEnv(MagnetsEnv):
+    def __init__(self, *args, **kwargs):
+        super(MultiEnv, self).__init__(*args, **kwargs)
+        self.agent_envs = \
+            [MultiEnvAgentEnv(self, i, self.num_agents) for i in range(self.num_agents)]
+
+        self.action = np.zeros(self.num_agents)
+        self.result = None
+        self.render_tid = None
+
+        self.action_lock = Lock()
+
+        self.tlock = ThreshLock(self.num_agents)
+        # TODO: there's so much synchronization going on here. Could this be optimized?
+
+    def _update_action(self, action_u):
+        self.action_lock.acquire()
+        self.action = np.maximum(self.action, action_u)
+        self.action_lock.release()
+
+    def _reset(self):
+        n = self.tlock.wait()
+        if (n == 1):  # only one agent should /actually/ call reset
+            self.result = super(MultiEnv, self)._reset()
+        self.tlock.wait()
+        return self.result
+
+    def _step(self, action):
+        self._update_action(action)
+        n = self.tlock.wait()
+        if (n == 1):  # only one agent should /actually/ step
+            self.result = super(MultiEnv, self)._step(self.action)
+            self.action = np.zeros(self.num_agents)
+        self.tlock.wait()
+        return self.result
+
+    def _render(self, *args, **kwargs):
+        n = self.tlock.wait()
+        tid = get_ident()
+        if (self.render_tid is None and n == 1):
+            self.render_tid = tid
+        if (tid == self.render_tid):
+            super(MultiEnv, self)._render(*args, **kwargs)
+
+    def _seed(self, *args, **kwargs):
+        super(MultiEnv, self)._seed(*args, **kwargs)
+
+    @property
+    def child_envs(self):
+        return self.agent_envs
+
+
+class MultiEnvAgentEnv(Env):
+    def __init__(self, parentenv, i_agent, n_agents):
+        self.env = parentenv
+        self.i = i_agent
+        self.n_agents = n_agents
+        self.observation_space = parentenv.observation_space
+        self.action_space = \
+            Discrete(int(parentenv.action_space.n ** (1/float(n_agents))))
+        self.metadata = parentenv.metadata
+
+    def _step(self, action):
+        c_action = np.zeros(self.n_agents)
+        c_action[self.i] = action
+        return self.env._step(c_action)
+
+    def _reset(self):
+        return self.env._reset()
+
+    def _render(self, *args, **kwargs):
+        return self.env._render()
+
+    def _seed(self, *args, **kwargs):
+        return self.env._seed(*args, **kwargs)
+
 
 register(
     id='Magnets-v0',
@@ -177,9 +248,20 @@ register(
 )
 
 register(
+    id='Magnets1-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 1, 'friction': 2.0}
+)
+
+register(
     id='Magnets2-v0',
     entry_point='rl.env:MagnetsEnv',
     kwargs={'num_agents': 2}
+)
+
+register(
+    id='MagnetsMulti-v0',
+    entry_point='rl.env:MultiEnv',
 )
 
 

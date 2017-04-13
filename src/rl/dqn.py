@@ -110,30 +110,34 @@ class DQNAgent:
             os.makedirs(self.save_dir)
 
         # Tensorflow graph information
+        self.graph = tf.Graph()
         self.sess = None
 
-        self.global_step = tf.Variable(0, name="global_step", trainable=False)
-        with tf.variable_scope("train_network"):
-            self.train_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
-            self.train_a = tf.placeholder(tf.float32, (None, env.action_space.n))
-            self.train_y = tf.placeholder(tf.float32, (None,))
-            self.train_q = self.q_network(self.train_s, env.action_space.n)
-            cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
-            self.optimize_op = self.optimizer.minimize(cost, global_step=self.global_step)
-            train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
-            avg_q = tf.reduce_mean(self.train_q)
+        with self.graph.as_default():
+            self.global_step = tf.Variable(0, name="global_step", trainable=False)
+            with tf.variable_scope("train_network"):
+                self.train_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
+                self.train_a = tf.placeholder(tf.float32, (None, env.action_space.n))
+                self.train_y = tf.placeholder(tf.float32, (None,))
+                self.train_q = self.q_network(self.train_s, env.action_space.n)
+                cost = \
+                    self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
+                self.optimize_op = self.optimizer.minimize(cost, global_step=self.global_step)
+                train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
+                avg_q = tf.reduce_mean(self.train_q)
 
-        with tf.variable_scope("target_network"):
-            self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
-            self.target_q = self.q_network(self.target_s, env.action_space.n)
-            target_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="target_network")
-            self.target_update_op = [
-                tf.assign(target_vars[i], train_vars[i]) for i in range(len(target_vars))
-            ]
+            with tf.variable_scope("target_network"):
+                self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
+                self.target_q = self.q_network(self.target_s, env.action_space.n)
+                target_vars = \
+                    tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="target_network")
+                self.target_update_op = [
+                    tf.assign(target_vars[i], train_vars[i]) for i in range(len(target_vars))
+                ]
 
-        self.metrics = [cost, avg_q]
-        self.latest_metrics = [0.0, 0.0]
-        self.metric_str = "loss: %f, average q value: %f"
+            self.metrics = [cost, avg_q]
+            self.latest_metrics = [0.0, 0.0]
+            self.metric_str = "loss: %f, average q value: %f"
 
     def _calc_q_update(self, ns, r, t):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
@@ -180,12 +184,11 @@ class DQNAgent:
 
         returns: void
         """
+        with self.graph.as_default():
+            init_op = tf.global_variables_initializer()
+            saver = tf.train.Saver(max_to_keep=None)
 
-        init_op = tf.global_variables_initializer()
-
-        saver = tf.train.Saver(max_to_keep=None)
-
-        with tf.Session() as sess:
+        with tf.Session(graph=self.graph) as sess:
             self.sess = sess
             checkpoint = tf.train.latest_checkpoint(self.save_dir)
             if (checkpoint is not None):
@@ -260,8 +263,9 @@ class DQNAgent:
         else:
             checkpoint = "%s/model-%d" % (self.save_dir, iterations)
 
-        saver = tf.train.Saver(max_to_keep=None)
-        with tf.Session() as sess:
+        with self.graph.as_default():
+            saver = tf.train.Saver(max_to_keep=None)
+        with tf.Session(graph=self.graph) as sess:
             self.sess = sess
             saver.restore(sess, checkpoint)
 
