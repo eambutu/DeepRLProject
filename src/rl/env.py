@@ -165,11 +165,13 @@ class MagnetsEnv(Env):
             return np.asarray(img)
 
 
-class MultiEnv(MagnetsEnv):
-    def __init__(self, *args, **kwargs):
-        super(MultiEnv, self).__init__(*args, **kwargs)
-        self.agent_envs = \
-            [MultiEnvAgentEnv(self, i, self.num_agents) for i in range(self.num_agents)]
+class MultiEnv(Env):
+    def __init__(self, env, num_agents, *args, **kwargs):
+        self.env = env
+        self.num_agents = num_agents
+        self.observation_space = env.observation_space
+        self.action_space = env.action_space
+        self.metadata = env.metadata
 
         self.action = np.zeros(self.num_agents)
         self.result = None
@@ -180,6 +182,9 @@ class MultiEnv(MagnetsEnv):
         self.tlock = ThreshLock(self.num_agents)
         # TODO: there's so much synchronization going on here. Could this be optimized?
 
+        self.agent_envs = \
+            [MultiEnvAgentEnv(self, i, self.num_agents) for i in range(self.num_agents)]
+
     def _update_action(self, action_u):
         self.action_lock.acquire()
         self.action = np.maximum(self.action, action_u)
@@ -188,7 +193,7 @@ class MultiEnv(MagnetsEnv):
     def _reset(self):
         n = self.tlock.wait()
         if (n == 1):  # only one agent should /actually/ call reset
-            self.result = super(MultiEnv, self)._reset()
+            self.result = self.env._reset()
         self.tlock.wait()
         return self.result
 
@@ -196,7 +201,7 @@ class MultiEnv(MagnetsEnv):
         self._update_action(action)
         n = self.tlock.wait()
         if (n == 1):  # only one agent should /actually/ step
-            self.result = super(MultiEnv, self)._step(self.action)
+            self.result = self.env._step(self.action)
             self.action = np.zeros(self.num_agents)
         self.tlock.wait()
         return self.result
@@ -207,10 +212,12 @@ class MultiEnv(MagnetsEnv):
         if (self.render_tid is None and n == 1):
             self.render_tid = tid
         if (tid == self.render_tid):
-            super(MultiEnv, self)._render(*args, **kwargs)
+            # only one agent should /actually/ render
+            # also has to be the same thread every time, for some sdl reason
+            self.env._render(*args, **kwargs)
 
     def _seed(self, *args, **kwargs):
-        super(MultiEnv, self)._seed(*args, **kwargs)
+        self.env._seed(*args, **kwargs)
 
     @property
     def child_envs(self):
@@ -262,6 +269,7 @@ register(
 register(
     id='MagnetsMulti-v0',
     entry_point='rl.env:MultiEnv',
+    kwargs={'env': MagnetsEnv(num_agents=3), 'num_agents': 3}
 )
 
 
