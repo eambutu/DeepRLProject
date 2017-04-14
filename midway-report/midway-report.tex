@@ -1,0 +1,288 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2016
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2016}
+
+% \usepackage{nips_2016}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final]{midway-report}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+\title{10-703 Project: Midway Report}
+
+\author{Kumail Jaffer \And Sidhanth Mohanty \And Phillip
+Wang
+\AND
+\texttt{mjaffer@andrew.cmu.edu} \And
+\texttt{smohant1@andrew.cmu.edu}\And
+\texttt{pkwang@andrew.cmu.edu}}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+The goal of this project is to solve a multiagent
+cooperative game that we set up using various
+reinforcement learning techniques combining ideas
+from the literature.
+
+The game is set up in the following way: there is a target
+$q_t$ at some location in the box $[-1,1]\times[-1,1]$
+and there are 3 agents $q_1,q_2,q_3$ at points in the circle of
+radius $\sqrt{2}$ around the origin. The agents can move
+in one of 8 directions at a certain speed (all angles
+$\frac{2\pi i}{8}$ for $i=0,1,\ldots,7$) and exert a force
+on the target, which induces motion. The goal is to
+keep the target inside the box for as long as possible.
+The agents are confined to the unit circle of radius
+$\sqrt{2}$ around the origin $B(0,\sqrt{2})$.
+The force that an agent exerts on the target is $\frac{C}{r^2}$
+where $r$ is the distance between the agent and target, and
+the target accelerates at a rate proportional to the force.
+For each timestep that the target stays in the box, the
+environment gives a reward of value 1.
+
+The state is given by the following information:
+\begin{itemize}
+\item Position of the target
+\item Velocity of the target
+\item Position of agent $i$ for each agent $i$
+\item Velocity of target $i$ for each agent $i$
+\end{itemize}
+
+In a single time step, the state changes in the following way:
+the positions of the target and agent are updated based on
+current velocity, the target's velocity is updated
+based on the acceleration induced by the forces
+of agents, calculated based on current positions. Then the
+velocities of the agents are calculated based on the
+actions of the agents.
+
+The inherent trouble with using standard approaches of treating
+the ensemble of agents as a single agent is that the action
+space then suffers from the curse of dimensionality, which
+calls for a large number of training iterations to
+learn. Another fairly intuitive approach might be to
+train each agent separately on the environment, but
+this fails to capture the notion that the actions of
+different agents need to be coherently coordinated,
+and each agent taking actions individually may not
+result in coordinated actions.
+
+In order to have coordination between agents while
+simultaneously keeping the dimensionality
+of the action space small, we use techniques inspired
+by the literature of hierarchical reinforcement learning,
+and multiagent reinforcement learning: specifically in
+the setting where the agents are collaborating.
+The papers and their contributions are sketched in
+the `Literature Survey' section below, and our exact
+approach to the problem is described in more depth
+in the `Methods' section.
+
+\subsection*{Literature Survey}
+
+\section{Methods}
+
+To solve this problem, we have four different methods, with the
+first two being the baseline that uses approaches we learned
+from class in a straightforward manner, and the other two being
+more sophisticated so they can beat the baseline. The
+reason we implemented the first two methods is to
+convince ourselves that they are indeed a bad idea and that
+this problem indeed calls for more involved techniques.
+
+
+\subsection{Method 1: single agent DQN}
+Our first method is a straightforward application of
+DQNs to this
+problem where we treat the three agents as a single agent,
+where the action is given by a 3D vector, with the
+entries being the action of the corresponding agents.
+The problem with this approach and the reason we don't expect
+this approach to work well is that the number of actions blows
+up to $9^3=729$ and hence the resulting high sample complexity
+of the problem would require a large number of training
+iterations to converge.
+
+We follow the DQN approach of \cite{mnih2013playing}
+where the state $S$ of the game is given as input to a
+neural network and the output of the neural network
+is a vector of $Q$-values of dimension equal to the
+size of the action space, where the $i$th entry of the
+vector corresponds to the estimate of $Q(S,a_i)$ where $a_i$
+is the $i$th action. The action taken is then decided
+based on the vector of $Q$-values using methods like
+a $\varepsilon$-greedy policy.
+
+The exact architecture of the neural network is
+a fully connected layer with ReLU activation
+with output dimension 20, followed by
+a linear layer with output dimension
+equal to the total number of actions.
+
+To train this DQN (called the online network), we also maintain
+a target DQN that we train against. We first start the game
+by playing a number of random actions and as
+more time steps pass, we anneal the
+probability of picking a random action down,
+store tuples of 
+$\texttt{(state, action, reward, next state)}$
+in an experience buffer (for using experience
+replay while training), and every few iterations,
+train the neural net on a batch of 32 randomly
+sampled examples from the replay buffer. And
+for some $T$, the target network's weights
+are updated to those of the online network every
+$T$ steps.
+
+We implemented this and the results are described in
+the `Results' section.
+
+\subsection{Method 2: a DQN per agent}
+A natural step to try next to combat the blow-up
+of the action space is to treat each agent
+individually. There are three $Q$ functions:
+$Q_1, Q_2$ and $Q_3$, one for each agent, and
+for each state-action pair $\langle S,a\rangle$,
+there are estimates $Q_1(S,a),Q_2(S,a)$ and
+$Q_3(S,a)$. We train three DQNs in a way similar
+to what was described in the previous section
+(using target fixing and experience replay), one for
+each $Q_i$.
+
+The architecture of the each DQN is the same as the
+previous method, except instead of having an output
+layer of dimension $729$, the output layer has dimension
+just $9$. When in state $S$, agent $i$ selects which one
+of 9 actions to pick based on an $\varepsilon$-greedy policy
+on the $Q$-values $Q(S,a)$.
+
+Since this greatly decreases the dimensionality of
+the action space, we expect the convergence to be
+faster: however we don't expect this technique to
+converge to a good policy because our setup
+of training as well as actions taken by each agent
+fails to capture the notion of coordination or
+communication needed between agents to play effectively.
+
+We ran experiments for this, and described the results in
+the `Results' section.
+
+\subsection{Method 3: Conditional DQN}
+This is a modification of \textbf{Method 2} to incorporate
+the notion of coodination and somehow have agents communicate
+with eachother.
+
+We describe a neural network architecture that we train
+on.
+\begin{itemize}
+
+\item The input to the first layer is the state vector of
+the game: the first layer is a fully connected layer
+with 20 output units with activation ReLU.
+
+\item The second layer is a fully connected linear layer
+with 9 output units: these correspond to the $Q$-values
+of the 9 actions for input state $S$ for agent 1: call
+this $q_1$.
+
+\item The nine $Q$-values go through a softmax layer, and the
+output is called $h_1$. In short $h_1=\mathrm{Softmax}(q_1)$.
+
+\item The next layer takes in $h_1$ as well as input
+state vector $S$ and has activation ReLU and 20 output
+units.
+
+\item Then there is a fully connected linear layer with
+9 output units, which correspond to the $Q$-values
+of the 9 actions for input state $S$ for agent 2
+conditioned on the $Q$-value estimates of
+agent 1. Call this output as $q_2$.
+
+\item There is a softmax layer that gives us $h_2$ from
+$q_2$.
+
+\item A fully ReLU layer takes in $h_1, h_2$ and the input
+state $S$ and has 20 output units. 
+
+\item The 20 output units from the previous layer are
+passed in through a fully connected linear layer with
+9 output units to obtain the $Q$-values for the 9
+possible actions for agent 3 based on the current state
+and the $Q$-value estimates of agent 1 and agent 2
+to get vector $q_3$.
+
+\item The output of the neural net is $\langle q_1,q_2,q_3
+\rangle$.
+
+\end{itemize}
+
+The actions are selected for agent $i$ using $q_i$,
+presumably using $\varepsilon$-greedy.
+The vector $h_i$ highlights the entries with
+high $Q$-values and intuitively captures
+what agent $i$ might do, and it's expected that
+passing along this information intuitively helps
+with coordination. The training routine is the same as that
+of a standard DQN (using randomly sampled examples from
+a replay buffer and a target that is fixed).
+
+\subsection{Method 4: Hierarchical Multiagent Approach}
+Inspired by the use of the metacontroller-subcontroller
+hierarchy for temporal abstraction in \cite{kulkarni2016hierarchical}, we try a similar approach
+to achieve coordination between multiple agents in an
+environment where the metacontroller plays the role
+of the `coordinator' by delegating
+tasks to the agents.
+
+\section{Preliminary Results}
+
+\section{Final Plan}
+
+
+
+\bibliographystyle{alpha}
+\bibliography{midway-report}
+
+% \section*{References}
+
+% References follow the acknowledgments. Use unnumbered first-level
+% heading for the references. Any choice of citation style is acceptable
+% as long as you are consistent. It is permissible to reduce the font
+% size to \verb+small+ (9 point) when listing the references. {\bf
+%   Remember that you can use a ninth page as long as it contains
+%   \emph{only} cited references.}
+% \medskip
+
+% \small
+
+% [1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms
+% for connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and
+% T.K.\ Leen (eds.), {\it Advances in Neural Information Processing
+%   Systems 7}, pp.\ 609--616. Cambridge, MA: MIT Press.
+
+% [2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS:
+%   Exploring Realistic Neural Models with the GEneral NEural SImulation
+%   System.}  New York: TELOS/Springer--Verlag.
+
+% [3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of
+% learning and recall at excitatory recurrent synapses and cholinergic
+% modulation in rat hippocampal region CA3. {\it Journal of
+%   Neuroscience} {\bf 15}(7):5249-5262.
+
+\end{document}
