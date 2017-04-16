@@ -56,13 +56,8 @@ the target accelerates at a rate proportional to the force.
 For each timestep that the target stays in the box, the
 environment gives a reward of value 1.
 
-The state is given by the following information:
-\begin{itemize}
-\item Position of the target
-\item Velocity of the target
-\item Position of agent $i$ for each agent $i$
-\item Velocity of target $i$ for each agent $i$
-\end{itemize}
+The state is given by the following information: position and velocity
+of the target, and position and velocity of each agent $i$.
 
 In a single time step, the state changes in the following way:
 the positions of the target and agent are updated based on
@@ -231,7 +226,7 @@ the `Results' section.
 \subsection{Method 3: Conditional DQN}
 This is a modification of \textbf{Method 2} to incorporate
 the notion of coodination and somehow have agents communicate
-with eachother.
+with eachother, following the paper \cite{foerster2016learning}.
 
 We describe a neural network architecture that we train
 on.
@@ -242,25 +237,20 @@ the game: the first layer is a fully connected layer
 with 20 output units with activation ReLU.
 
 \item The second layer is a fully connected linear layer
-with 9 output units: these correspond to the $Q$-values
+with 9+9 output units: the first nine correspond to the $Q$-values
 of the 9 actions for input state $S$ for agent 1: call
-this $q_1$.
-
-\item The nine $Q$-values go through a softmax layer, and the
-output is called $h_1$. In short $h_1=\mathrm{Softmax}(q_1)$.
+this $q_1$, and the next 9 correspond to a `message' $h_1$ that
+we intend on passing to later agents.
 
 \item The next layer takes in $h_1$ as well as input
 state vector $S$ and has activation ReLU and 20 output
 units.
 
 \item Then there is a fully connected linear layer with
-9 output units, which correspond to the $Q$-values
+9+9 output units, which correspond to the $Q$-values
 of the 9 actions for input state $S$ for agent 2
-conditioned on the $Q$-value estimates of
-agent 1. Call this output as $q_2$.
-
-\item There is a softmax layer that gives us $h_2$ from
-$q_2$.
+along, called $q_2$, along with a message $h_2$
+for message 3.
 
 \item A fully ReLU layer takes in $h_1, h_2$ and the input
 state $S$ and has 20 output units. 
@@ -291,16 +281,46 @@ a replay buffer and a target that is fixed).
 Inspired by the use of the metacontroller-subcontroller
 hierarchy for temporal abstraction in \cite{kulkarni2016hierarchical}, we try a similar approach
 to achieve coordination between multiple agents in an
-environment where the metacontroller plays the role
-of the `coordinator' by delegating
-tasks to the agents.
+environment where the metacontroller plays the role of the `coordinator' by delegating
+tasks to the agents. The way the agents make their moves is via a subcontroller,
+which learns to obey the directions given to it by the metacontroller
+
+The idea is that the metacontroller outputs a target
+impulses, where the $i$th target impulse is the total impulse
+that agent $i$ has on the target: this impulse is equal to the momentum
+imparted by agent $i$ on the target: the change in momentum of the target due to
+agent $i$ in the time interval $(t_1,t_2)$ is given by
+\[
+\Delta p = \int_{t_1}^{t_2} F_i(t)dt
+\]
+where $F_i(t)$ is the force exerted by agent $i$ on the target at time $t$.
+
+The metacontroller gives a target impulse that an agent tries to inflict on the target
+for a period of 100 timesteps.
+The reward to the subcontroller guiding the agent would be $-\|\Delta p - L\|_2$ where
+$L$ is the target impulse, thus giving a more negative reward for deviating from the
+goal given by the metacontroller.
+
+The subcontroller takes in a state and the goal and outputs $Q$-values, based on which
+an action is taken via a $\varepsilon$-greedy policy, and the way the subcontroller is
+trained would be the way a DQN is trained, like in the previous methods.
+
+<insert stuff on how to train metacontroller here>
 
 \section{Preliminary Results}
 
 \section{Final Plan}
-We plan to get a running implementation of Method 4 and a better implementation of
-method 3. We also intend to understand the techniques from multiagent
-reinforcement learning papers mentioned in the literature review
+We plan to get a running implementation of Method 3 and Method 4, with the goal
+of having it beat the benchmarks that we implemented using Method 1 and Method 2. We also intend
+to internalize the techniques from multiagent reinforcement learning papers mentioned
+in the literature review and apply them to our project, and compare them
+with our approach in method 4: in particular (insert citations).
+
+Other extensions to the project would include adding more agents, making the agents heterogeneous,
+like increasing the amount of charge that some agents carry, and increasing the speed at which
+some agents may move. Another extension would be to implement the environment with partial
+information, where each agent knows their own position and velocity and only positions of other
+agents, and compare how the four methods fare against eachother.
 
 \bibliographystyle{plain}
 \bibliography{midway-report}
