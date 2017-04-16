@@ -103,7 +103,7 @@ work has been done in marrying the two ideas, such as
 \cite{tampuu2017multiagent}, which examines cooperative 
 and competitive multiagent behavior in Pong with Deep Q-networks by
 tampering with environment rewards, or
-\cite{usunier2016episodic}, which applies multiagent deep
+\cite{usunier2016episodic, peng2017multiagent}, which applies multiagent deep
 reinforcement learning on StarCraft micromanagement tasks.
 
 
@@ -121,7 +121,7 @@ between the agents, also performs well in situations where each agent only
 observes parts of the environment. Researchers at OpenAI
 have developed ways to learn grounded compositional language
 \cite{mordatch2017emergence} by letting multiple agents
-communicate only over differentiable channels.
+communicate only over limited differentiable channels.
 
 
 Our approach for multiagent collaboration draws inspiration from
@@ -130,7 +130,7 @@ temporal abstraction by learning a metacontroller, which picks
 a subtasks, and a subcontroller, which learns to perform each
 subtask well. The idea is: when going from one place to another,
 one doesn't think about each step he/she takes, but rather
-thinks in terms of subtasks that he/she knows how to do (go to
+thinks in terms of composing subtasks that he/she knows how to do (go to
 the bus stop, take the bus, walk down three blocks, etc.).
 These techniques have been used to solve environments with
 sparse rewards like Montezuma's Revenge and Minecraft
@@ -143,7 +143,7 @@ first two being the baseline that uses approaches we learned
 from class in a straightforward manner, and the other two being
 more sophisticated so they can beat the baseline. The
 reason we implemented the first two methods is to
-convince ourselves that they are indeed a bad idea and that
+convince ourselves that
 this problem indeed calls for more involved techniques.
 
 
@@ -226,9 +226,9 @@ the `Results' section.
 \subsection{Method 3: Conditional DQN}
 This is a modification of \textbf{Method 2} to incorporate
 the notion of coodination and somehow have agents communicate
-with eachother, following ideas from the paper \cite{foerster2016learning}.
+with each other, drawing ideas from \cite{foerster2016learning}.
 
-We describe a neural network architecture that we train
+We describe the neural network architecture that we train
 on.
 \begin{itemize}
 
@@ -276,6 +276,10 @@ passing along this information intuitively helps
 with coordination. The training routine is the same as that
 of a standard DQN (using randomly sampled examples from
 a replay buffer and a target that is fixed).
+Following the setups from \cite{foerster2016learning,
+sukhbaatar2016learning}, the three neural networks share
+weights.
+
 
 \subsection{Method 4: Hierarchical Multiagent Approach}
 Inspired by the use of the metacontroller-subcontroller
@@ -285,7 +289,7 @@ environment where the metacontroller plays the role of the `coordinator' by dele
 tasks to the agents. The way the agents make their moves is via a subcontroller,
 which learns to obey the directions given to it by the metacontroller
 
-The idea is that the metacontroller outputs a target
+The metacontroller learns to output target
 impulses, where the $i$th target impulse is the total impulse
 that agent $i$ has on the target, equal to the momentum
 imparted by agent $i$ on the target. The change in momentum of the target due to
@@ -320,13 +324,13 @@ took steps based on the goals given to it.
 
 \section{Final Plan}
 We plan to get a running implementation of Method 3 and Method 4, with the goal
-of having it beat the benchmarks that we implemented using Method 1 and Method 2. We also intend
-to internalize the techniques from multiagent reinforcement learning papers mentioned
-in the literature review and apply them to our project, and compare them
-with our approach in method 4: in particular (insert citations).
+of having it beat the benchmarks that we implemented using Method 1 and Method 2.
+We also intend to implement the current state-of-the-art methods
+in multiagent reinforcement learning \cite{foerster2016learning, sukhbaatar2016learning, peng2017multiagent},
+and compare their results to method 4.
 
 Other extensions to the project would include adding more agents, making the agents heterogeneous,
-like increasing the amount of charge that some agents carry, and increasing the speed at which
+(e.g. varying the magnitude of charge that agents carry), and increasing the speed at which
 some agents may move. Another extension would be to implement the environment with partial
 information, where each agent knows their own position and velocity and only positions of other
 agents, and compare how the four methods fare against eachother.
