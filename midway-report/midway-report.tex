@@ -96,6 +96,51 @@ in the `Methods' section.
 
 \subsection*{Literature Survey}
 
+In recent years, there has been a lot of hype in Deep
+Reinforcement Learning \cite{mnih2015human}, achieving 
+human-level performance in complex domains such as Atari
+\cite{mnih2013playing} and Go \cite{silver2016mastering}. At
+the same time, there is extensive work in Multiagent 
+Reinforcement Learning \cite{busoniu2008comprehensive},
+especially in the context of robotics \cite{spaan2002high,
+ fox2000probabilistic, mataric1997reinforcement}. More recently,
+work has been done in marrying the two ideas, such as
+\cite{tampuu2017multiagent}, which examines cooperative 
+and competitive multiagent behavior in Pong with Deep Q-networks by
+tampering with environment rewards, or
+\cite{usunier2016episodic}, which applies multiagent deep
+reinforcement learning on StarCraft micromanagement tasks.
+
+
+Some research has been done on multiagent reinforcement learning
+with limited communication. DIAL (Differentiable Inter-agent Learning) \cite{foerster2016learning},
+is an approach in which
+each agent acts as an independent learner, and agents communicate
+by passing messages. In particular, each agent is modeled by
+a Recurrent Neural Network that outputs an action and a message
+to be passed to each subsequent agent. During test time, these
+agents can only communicate through a channel with limited bandwidth.
+On the other hand, CommNet \cite{sukhbaatar2016learning}, which
+has a single controller for actions and communication
+between the agents, also performs well in situations where each agent only
+observes parts of the environment. Researchers at OpenAI
+have developed ways to learn grounded compositional language
+\cite{mordatch2017emergence} by letting multiple agents
+communicate only over differentiable channels.
+
+
+Our approach for multiagent collaboration draws inspiration from
+Hierarchical Reinforcement Learning \cite{kulkarni2016hierarchical}. These techniques are used to learn
+temporal abstraction by learning a metacontroller, which picks
+a subtasks, and a subcontroller, which learns to perform each
+subtask well. The idea is: when going from one place to another,
+one doesn't think about each step he/she takes, but rather
+thinks in terms of subtasks that he/she knows how to do (go to
+the bus stop, take the bus, walk down three blocks, etc.).
+These techniques have been used to solve environments with
+sparse rewards like Montezuma's Revenge and Minecraft
+\cite{tessler2016deep}.
+
 \section{Methods}
 
 To solve this problem, we have four different methods, with the
