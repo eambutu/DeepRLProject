@@ -20,6 +20,8 @@
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage{float}
 
 \title{10-703 Project: Midway Report}
 
@@ -40,7 +42,7 @@ solving multiagent cooperative games, as well as try
 ideas and variants from current literature.
 
 Our project direction has deviated significantly from the
-initial project proposal. We still draw many ideas from 
+initial project proposal. We still draw many ideas from
 Hierarchical Reinforcement Learning, but have switched because
 we found this problem more motivated and interesting.
 
@@ -98,15 +100,15 @@ in the `Methods' section.
 \subsection*{Literature Survey}
 
 In recent years, there has been a lot of hype in Deep
-Reinforcement Learning \cite{mnih2015human}, achieving 
+Reinforcement Learning \cite{mnih2015human}, achieving
 human-level performance in complex domains such as Atari
 \cite{mnih2013playing} and Go \cite{silver2016mastering}. At
-the same time, there is extensive work in Multiagent 
+the same time, there is extensive work in Multiagent
 Reinforcement Learning \cite{busoniu2008comprehensive},
 especially in the context of robotics \cite{spaan2002high,
  fox2000probabilistic, mataric1997reinforcement}. More recently,
 work has been done in marrying the two ideas, such as
-\cite{tampuu2017multiagent}, which examines cooperative 
+\cite{tampuu2017multiagent}, which examines cooperative
 and competitive multiagent behavior in Pong with Deep Q-networks by
 tampering with environment rewards, or
 \cite{usunier2016episodic, peng2017multiagent}, which applies multiagent deep
@@ -186,7 +188,7 @@ a target DQN that we train against. We first start the game
 by playing a number of random actions and as
 more time steps pass, we anneal the
 probability of picking a random action down,
-store tuples of 
+store tuples of
 $\texttt{(state, action, reward, next state)}$
 in an experience buffer (for using experience
 replay while training), and every few iterations,
@@ -259,7 +261,7 @@ along, called $q_2$, along with a message $h_2$
 for agent 3.
 
 \item A fully ReLU layer takes in $h_2$ and the input
-state $S$ and has 20 output units. 
+state $S$ and has 20 output units.
 
 \item The 20 output units from the previous layer are
 passed in through a fully connected linear layer with
@@ -328,6 +330,63 @@ took steps based on the goals given to it.
 
 
 \section{Preliminary Results}
+
+So far, we've implemented the toy environment we described, as well as methods
+1 and 2, and run them on an instance of the environment with three agents.
+
+Method 1 fails to converge to any sort of reasonable policy. This was expected,
+since the size of our action space is enormous if we treat the three agents as a
+single agent. As visible in figure 1, the losses continuously decrease and never
+begin increasing. This is probably because the model is so complex, it takes a
+long time to train. As visible in figure 2, the average reward of the agent
+increases over time, though it never does anything amazing, and never reaches
+the performance of a human player.
+Videos of the agent seem to begin to learn a meaningful
+strategy, but it takes the agent a lot of time.
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.5]{dqn-training-loss}
+\caption{Losses during training for method 1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.5]{dqn-average-reward}
+\caption{Average rewards during training for method 1}
+\end{figure}
+
+Method 2 is a little more promising. The losses decrease until some inflection
+point, where they begin increasing, as you would expect (if they never
+increased, one might be concerned that the model is overfitting). The average
+rewards seem to roughly increase over time, and the best policy this learns is
+better than that of model 1. The model learned, however, is quite
+unstable. With a gap of only a few hundred training updates, the policy the
+network learns can go from wildly successful to wildly unsuccessful. We suspect
+this may be because this model doesn't coordinate the actions of the agents very
+well, and hope that the other two models can help to do this.
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.5]{dqn-multi-training-loss}
+\caption{Average rewards over time for method 2}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.5]{dqn-multi-average-reward}
+\caption{Average rewards during training for method 2}
+\end{figure}
+
+The visibibility of the trends in these graphs is slightly complicated by the
+fact that the agent's success is extremely sensitive to the starting position.
+There are some positions from which it is extremely difficult to get a good
+score. This means that the agent's performance necessarily has high variance and
+its average reward gets obscured.
+
+To get a sense of what the agent learns, it is helpful to look at videos of the
+strategies it learns. We provide them here:
+\url{https://www.youtube.com/playlist?list=PL2Hlc8GXcnpfXdMdBUpE0rjldxPwK2ZxR}
 
 \section{Final Plan}
 We plan to get a running implementation of Method 3 and Method 4, with the goal
