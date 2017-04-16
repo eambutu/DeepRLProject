@@ -226,7 +226,7 @@ the `Results' section.
 \subsection{Method 3: Conditional DQN}
 This is a modification of \textbf{Method 2} to incorporate
 the notion of coodination and somehow have agents communicate
-with eachother, following the paper \cite{foerster2016learning}.
+with eachother, following ideas from the paper \cite{foerster2016learning}.
 
 We describe a neural network architecture that we train
 on.
@@ -250,9 +250,9 @@ units.
 9+9 output units, which correspond to the $Q$-values
 of the 9 actions for input state $S$ for agent 2
 along, called $q_2$, along with a message $h_2$
-for message 3.
+for agent 3.
 
-\item A fully ReLU layer takes in $h_1, h_2$ and the input
+\item A fully ReLU layer takes in $h_2$ and the input
 state $S$ and has 20 output units. 
 
 \item The 20 output units from the previous layer are
@@ -287,15 +287,15 @@ which learns to obey the directions given to it by the metacontroller
 
 The idea is that the metacontroller outputs a target
 impulses, where the $i$th target impulse is the total impulse
-that agent $i$ has on the target: this impulse is equal to the momentum
-imparted by agent $i$ on the target: the change in momentum of the target due to
+that agent $i$ has on the target, equal to the momentum
+imparted by agent $i$ on the target. The change in momentum of the target due to
 agent $i$ in the time interval $(t_1,t_2)$ is given by
 \[
 \Delta p = \int_{t_1}^{t_2} F_i(t)dt
 \]
 where $F_i(t)$ is the force exerted by agent $i$ on the target at time $t$.
 
-The metacontroller gives a target impulse that an agent tries to inflict on the target
+The metacontroller gives a goal impulse that an agent tries to inflict on the target
 for a period of 100 timesteps.
 The reward to the subcontroller guiding the agent would be $-\|\Delta p - L\|_2$ where
 $L$ is the target impulse, thus giving a more negative reward for deviating from the
@@ -305,7 +305,16 @@ The subcontroller takes in a state and the goal and outputs $Q$-values, based on
 an action is taken via a $\varepsilon$-greedy policy, and the way the subcontroller is
 trained would be the way a DQN is trained, like in the previous methods.
 
-<insert stuff on how to train metacontroller here>
+The goal given by the metacontroller can be viewed as it's action. Since the action
+space is continuous, standard techniques of estimating the $Q$-values of every action
+are not well-defined any more. Fortunately, \cite{lillicrap2015continuous} resolves
+this using actor-critic methods to deterministically select a continuous action
+given a state. The setup involves an actor network that ouputs a continuous state based
+on an input state, and this is trained using a critic network, which approximates the
+value of input states on actions given by the actor network. The rewards to the metacontroller
+are the cumulative rewards of the environment over the 100 steps where the subcontroller
+took steps based on the goals given to it.
+
 
 \section{Preliminary Results}
 
