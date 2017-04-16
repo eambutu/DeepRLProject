@@ -278,7 +278,7 @@ class DQNAgent:
                     action = self._select_action(state, policy)
                     next_state, reward, is_terminal, _ = self.env.step(action)
                     episode_reward += reward
-                    self.env.render()
+                    # self.env.render()
                     state = next_state
                 samples.append(episode_reward)
 

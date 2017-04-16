@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 from threading import Thread
+from functools import partial
 
 import gym
 import tflearn
@@ -11,7 +12,7 @@ from rl.dqn import DQNAgent
 from rl.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy
 
 TRAIN_STEPS = 5000000
-TEST_STEPS = 100
+TEST_STEPS = 20
 
 EPSILON_START = 0.5
 EPSILON_END = 0.01
@@ -22,6 +23,15 @@ def q_model(x, n):
     h1 = tflearn.fully_connected(x, 20, activation='relu')
     out = tflearn.fully_connected(h1, n)
     return out
+
+
+output = (0, 0)
+
+
+def eval_and_report(agent, *args):
+    global output
+    (m, v) = agent.evaluate(*args)
+    output = (m, v)
 
 
 if __name__ == '__main__':
@@ -58,9 +68,12 @@ if __name__ == '__main__':
         for thread in train_threads:
             thread.join()
     if (args.run):
-        test_args = (test_policy, TEST_STEPS, args.iterations)
-        test_threads = [Thread(target=agent.evaluate, args=test_args) for agent in agents]
-        for thread in test_threads:
-            thread.start()
-        for thread in test_threads:
-            thread.join()
+        for it in range(1000, args.iterations, 1000):
+            test_args = (test_policy, TEST_STEPS, it)
+            test_threads = \
+                [Thread(target=partial(eval_and_report, agent), args=test_args) for agent in agents]
+            for thread in test_threads:
+                thread.start()
+            for thread in test_threads:
+                thread.join()
+            print(it, output)

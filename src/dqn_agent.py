@@ -54,5 +54,6 @@ if __name__ == '__main__':
     if (args.train):
         agent.train(train_policy, TRAIN_STEPS)
     if (args.run):
-        (m, v) = agent.evaluate(test_policy, TEST_STEPS, args.iterations)
-        print("mean: %f, variance: %f" % (m, v))
+        for it in range(1000, args.iterations, 1000):
+            (m, v) = agent.evaluate(test_policy, TEST_STEPS, it)
+            print(it, (m, v))
