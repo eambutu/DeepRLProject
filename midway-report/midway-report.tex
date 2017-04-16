@@ -35,11 +35,12 @@ Wang
 \maketitle
 
 \section{Introduction}
-The goal of this project is to solve a multiagent
-cooperative game that we set up using various
-reinforcement learning techniques combining ideas
-from the literature.
+The goal of this project is to try out novel ideas for
+solving multiagent cooperative games, as well as try
+ideas and variants from current literature.
 
+We set up a cooperative game to capture salient features
+of the multiagent reinforcement learning setting.
 The game is set up in the following way: there is a target
 $q_t$ at some location in the box $[-1,1]\times[-1,1]$
 and there are 3 agents $q_1,q_2,q_3$ at points in the circle of
@@ -300,10 +301,11 @@ agent $i$ in the time interval $(t_1,t_2)$ is given by
 where $F_i(t)$ is the force exerted by agent $i$ on the target at time $t$.
 
 The metacontroller gives a goal impulse that an agent tries to inflict on the target
-for a period of 100 timesteps.
-The reward to the subcontroller guiding the agent would be $-\|\Delta p - L\|_2$ where
-$L$ is the target impulse, thus giving a more negative reward for deviating from the
-goal given by the metacontroller.
+for a period of 100 timesteps. Let $(\Delta p)_i$ be the impulse of the agent
+on the target so far at timestep $i$. Define $\Phi_i$ as $\|(\Delta p)_i - L\|_2$ at timestep $i$.
+The reward to the subcontroller guiding the agent at timestep $i$ woud be
+$\Phi_{i-1}-\Phi_i$, thus giving a positive reward for making the total impulse
+closer to the target.
 
 The subcontroller takes in a state and the goal and outputs $Q$-values, based on which
 an action is taken via a $\varepsilon$-greedy policy, and the way the subcontroller is
