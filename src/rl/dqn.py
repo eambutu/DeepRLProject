@@ -25,7 +25,7 @@ def one_hot(a, n):
 def huber_loss(x, max_grad=1.):
     raw_loss = tf.abs(x)
     return tf.where(
-      tf.less(x, max_grad),
+      tf.less(raw_loss, max_grad),
       tf.multiply(tf.square(raw_loss), 0.5),
       tf.subtract(tf.multiply(raw_loss, max_grad), 0.5*max_grad*max_grad)
     )
@@ -33,6 +33,10 @@ def huber_loss(x, max_grad=1.):
 
 def mean_huber_loss(x, max_grad=1.):
     return tf.reduce_mean(huber_loss(x, max_grad))
+
+
+def mean_squared_loss(x):
+    return tf.reduce_mean(tf.square(x))
 
 
 def process_samples(samples, n):
@@ -54,7 +58,7 @@ class DQNAgent:
                  q_network,
                  memory=ReplayMemory(MEMORY_SIZE),
                  optimizer=tf.train.AdamOptimizer(learning_rate=ALPHA),
-                 loss=mean_huber_loss,
+                 loss=mean_squared_loss,
                  gamma=GAMMA,
                  num_burn_in=NUM_BURN_IN,
                  target_update_interval=TARGET_UPDATE_INTERVAL,
