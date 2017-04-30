@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from rl.core import ReplayMemory, Sample
-from rl.utils import mean_huber_loss, process_samples
+from rl.utils import mean_huber_loss, mean_squared_loss, process_samples
 
 # default hyperparameters
 GAMMA = 0.9
@@ -27,7 +27,7 @@ class DQNAgent:
                  q_network,
                  memory=ReplayMemory(MEMORY_SIZE),
                  optimizer=tf.train.AdamOptimizer(learning_rate=ALPHA),
-                 loss=mean_huber_loss,
+                 loss=mean_squared_loss,
                  gamma=GAMMA,
                  num_burn_in=NUM_BURN_IN,
                  target_update_interval=TARGET_UPDATE_INTERVAL,

@@ -20,6 +20,10 @@ def mean_huber_loss(x, max_grad=1.):
     return tf.reduce_mean(huber_loss(x, max_grad))
 
 
+def mean_squared_loss(x):
+    return tf.reduce_mean(tf.square(x))
+
+
 def process_samples(samples, n):
     s = np.array(list(map(lambda s: s.state, samples)))
     ns = np.array(list(map(lambda s: s.next_state, samples)))
@@ -27,4 +31,3 @@ def process_samples(samples, n):
     a = np.array(list(map(lambda s: one_hot(s.action, n), samples)))
     t = np.array(list(map(lambda s: s.is_terminal, samples)))
     return (s, a, ns, r, t)
-
