@@ -59,7 +59,6 @@ class MagnetsEnv(Env):
         ''' variables that change with time '''
         self.state = State(num_agents, seed)
 
-        self.spec = None
         self.viewer = None
 
     def _reset(self):
@@ -143,7 +142,6 @@ class MagnetsEnv(Env):
         draw.arc([0, 0, RENDER_WIDTH, RENDER_HEIGHT], 0, 360, fill=color)
 
     def _render(self, mode='human', close=False):
-
         img = Image.new('RGB', (RENDER_HEIGHT, RENDER_WIDTH), WHITE)
         draw = ImageDraw.Draw(img)
         for i in range(self.num_agents):
@@ -166,20 +164,26 @@ class MagnetsEnv(Env):
 
 
 register(
+    id='Magnets-v0',
+    entry_point='rl.env:MagnetsEnv',
+)
+
+register(
     id='Magnets1-v0',
     entry_point='rl.env:MagnetsEnv',
     kwargs={'num_agents': 1, 'friction': 2.0}
 )
 
 register(
-    id='Magnets-v0',
-    entry_point='rl.env:MagnetsEnv',
-)
-
-register(
     id='Magnets2-v0',
     entry_point='rl.env:MagnetsEnv',
     kwargs={'num_agents': 2}
+)
+
+register(
+    id='MagnetsMulti-v0',
+    entry_point='rl.multienv:MultiEnv',
+    kwargs={'env': MagnetsEnv(num_agents=3), 'num_agents': 3}
 )
 
 

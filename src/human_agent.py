@@ -65,7 +65,7 @@ def on_press(key):
     if (key == 'r'):
         should_reset = True
     if (key in key2move.keys()):
-        jslock.acquire(blocking=True)
+        jslock.acquire()
         joystick += key2move[key]
         np.clip(joystick, -1, 1, joystick)
         jslock.release()
@@ -75,7 +75,7 @@ def on_release(key):
     global joystick
     key = process_key(key)
     if (key in key2move.keys()):
-        jslock.acquire(blocking=True)
+        jslock.acquire()
         joystick -= key2move[key]
         jslock.release()
 
@@ -115,7 +115,7 @@ if __name__ == '__main__':
             if (should_reset):
                 env.reset()
                 should_reset = False
-            jslock.acquire(blocking=True)
+            jslock.acquire()
             action = joystick2action(joystick)[:args.sim_nagents]
             jslock.release()
             env.step(action)
