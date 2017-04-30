@@ -18,6 +18,7 @@ EPSILON_END = 0.01
 EPSILON_STEPS = 10000
 
 
+# first baseline
 def q_model(x, n):
     h1 = tflearn.fully_connected(x, 20, activation='relu')
     out = tflearn.fully_connected(h1, n)
