@@ -14,7 +14,41 @@ TARGET_UPDATE_INTERVAL = 1
 TRAIN_INTERVAL = 1
 BATCH_SIZE = 32
 MEMORY_SIZE = 10000
-REPORT_INTERVAL = 10
+REPORT_INTERVAL = 1000
+
+
+def one_hot(a, n):
+    x = np.zeros(shape=a.shape+(n,))
+    x[(range(len(a)), a)] = 1
+    return x
+
+
+def huber_loss(x, max_grad=1.):
+    raw_loss = tf.abs(x)
+    return tf.where(
+      tf.less(raw_loss, max_grad),
+      tf.multiply(tf.square(raw_loss), 0.5),
+      tf.subtract(tf.multiply(raw_loss, max_grad), 0.5*max_grad*max_grad)
+    )
+
+
+def mean_huber_loss(x, max_grad=1.):
+    with tf.name_scope("mean_huber_loss"):
+        return tf.reduce_mean(huber_loss(x, max_grad))
+
+
+def mean_squared_loss(x):
+    with tf.name_scope("mean_squared_loss"):
+        return tf.reduce_mean(tf.square(x))
+
+
+def process_samples(samples, n):
+    s = np.array(list(map(lambda s: s.state, samples)))
+    ns = np.array(list(map(lambda s: s.next_state, samples)))
+    r = np.array(list(map(lambda s: s.reward, samples)))
+    a = np.array(list(map(lambda s: one_hot(s.action, n), samples)))
+    t = np.array(list(map(lambda s: s.is_terminal, samples)))
+    return (s, a, ns, r, t)
 
 
 class DQNAgent:
@@ -104,17 +138,22 @@ class DQNAgent:
 
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
         with tf.variable_scope("train_network"):
-            self.train_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
-            self.train_a = tf.placeholder(tf.float32, (None, self.n_agents, self.n_actions))
-            self.train_y = tf.placeholder(tf.float32, (None, self.n_agents))
+            self.train_s = tf.placeholder(tf.float32, (None,)+env.observation_space.shape,
+                                          name="state")
+            self.train_a = tf.placeholder(tf.float32, (None, self.n_agents, self.n_actions),
+                                          name="action")
+            self.train_y = tf.placeholder(tf.float32, (None, self.n_agents),
+                                          name="q_actual")
             self.train_q = self.q_network(self.train_s, self.n_agents, self.n_actions)
-            cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
+            with tf.name_scope("loss_func"):
+                cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1)-self.train_y)
             self.optimize_op = self.optimizer.minimize(cost, global_step=self.global_step)
             train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
-            avg_q = tf.reduce_mean(self.train_q)
+            avg_q = tf.reduce_mean(self.train_q, name="avg_q_pred")
 
         with tf.variable_scope("target_network"):
-            self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
+            self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape,
+                                           name="state")
             self.target_q = self.q_network(self.target_s, self.n_agents, self.n_actions)
             target_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="target_network")
             self.target_update_op = [
@@ -219,7 +258,6 @@ class DQNAgent:
                             (b_s, b_a, b_ns, b_r, b_t) = \
                                 process_samples(batch, self.n_actions)
                             b_y = self._calc_q_update(b_ns, b_r, b_t)
-                            print(b_y)
                             n_updates = self._train_step(b_s, b_a, b_y)
                             self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
                             if (n_updates % self.target_update_interval == 0):

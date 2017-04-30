@@ -23,13 +23,14 @@ VIDEO_INTERVAL = 10000
 
 
 def single_agent_model(x, n_actions):
-    h1 = tflearn.fully_connected(x, 20, activation='relu')
-    out = tflearn.fully_connected(h1, n_actions)
-    return out
+    with tf.name_scope("single_agent"):
+        h1 = tflearn.fully_connected(x, 20, activation='relu')
+        out = tflearn.fully_connected(h1, n_actions)
+        return out
 
 
 def sequential_model(x, n_agents, n_actions):
-    qs = [single_agent_model(x, n_actions, 1)]
+    qs = [single_agent_model(x, n_actions)]
     smaxes = [tflearn.activations.softmax(qs[-1])]
 
     for i in range(1, n_agents):
@@ -40,7 +41,7 @@ def sequential_model(x, n_agents, n_actions):
         qs.append(single_agent_model(x_i, n_actions))
         smaxes.append(tflearn.activations.softmax(qs[-1]))
 
-    out = tf.stack(qs, axis=1)
+    out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
 
@@ -48,7 +49,7 @@ def parallel_model(x, n_agents, n_actions):
     qs = []
     for _ in range(n_agents):
         qs.append(single_agent_model(x, n_actions))
-    out = tf.stack(qs, axis=1)
+    out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
 
