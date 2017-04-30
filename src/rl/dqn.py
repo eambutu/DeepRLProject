@@ -24,14 +24,15 @@ def one_hot(a, n):
 
 def huber_loss(x, max_grad=1.):
     raw_loss = tf.abs(x)
-    return tf.maximum(
+    return tf.where(
+      tf.less(x, max_grad),
       tf.multiply(tf.square(raw_loss), 0.5),
       tf.subtract(tf.multiply(raw_loss, max_grad), 0.5*max_grad*max_grad)
     )
 
 
 def mean_huber_loss(x, max_grad=1.):
-    return tf.reduce_mean(huber_loss(x, max_grad))
+    return tf.reduce_mean(huber_loss(x, max_grad), axis=1)
 
 
 def process_samples(samples, n):
