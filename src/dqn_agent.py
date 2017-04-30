@@ -52,6 +52,46 @@ def parallel_model(x, n_agents, n_actions):
     return out
 
 
+def sequential_message_model(x, n_agents, n_actions):
+    """ some notes:
+        some choices in network architecture are arbitrary. For example there
+        is no good reason for the number of units in the hidden layer to be 20.
+        Also, there is no good reason for the size of the message to be 9. We
+        should tune these numbers as we go.
+    """
+    # l1 is some hidden layer output that agent 1 gives
+    l1 = tflearn.fully_connected(x, 20, activation='relu')
+    q1 = tflearn.fully_connected(l1, n_actions)
+
+    # the message passed from agent 1 to agent 2 is h1
+    h1 = tflearn.fully_connected(l1, n_actions)
+
+    messages = [h1]
+    qs = [q1]
+
+    for i in range(n_agents - 2):
+        # input_i is the message + state input
+        input_i = tf.stack([x, messages[i]], axis=1)
+
+        # li is some hidden layer for agent i
+        li = tflearn.fully_connected(input_i, 20, activation='relu')
+        qi = tflearn.fully_connected(li, n_actions)
+
+        # message from agent i+2 to agent i+3
+        hi = tflearn.fully_connected(li, n_actions)
+
+        messages.append(hi)
+        qs.append(qi)
+
+    input_n = tf.stack([x, messages[n_agents-2]])
+    qn = single_agent_model(input_n, n_actions)
+
+    qs.append(qn)
+    out = tf.stack(qs, axis=1)
+
+    return out
+
+
 def no_video_schedule(i):
     return False
 
