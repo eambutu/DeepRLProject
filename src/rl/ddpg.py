@@ -6,7 +6,12 @@ http://arxiv.org/pdf/1509.02971v2.pdf
 Referenced the implementation from: https://github.com/pemami4911/deep-rl/blob/master/ddpg/ddpg.py
 """
 import tensorflow as tf
+import numpy as np
 import tflearn
+import gym
+
+from core import ReplayMemory, Sample
+from utils import process_samples
 
 # Hyperparameters
 ACTOR_LEARNING_RATE = 0.0001
@@ -123,7 +128,7 @@ class CriticNetwork(object):
 
     def create_critic_network(self):
         state = tflearn.input_data(shape=[None, self.s_dim])
-        action = tflearn.input_data(shpae=[None, self.a_dim])
+        action = tflearn.input_data(shape=[None, self.a_dim])
         layer1 = tflearn.fully_connected(state, 400, activation='relu')
 
         temp1 = tflearn.fully_connected(layer1, 300)
@@ -163,3 +168,80 @@ class CriticNetwork(object):
 
     def update_target_network(self):
         self.sess.run(self.update_target_network_params)
+
+def main():
+    with tf.Session() as sess:
+        env = gym.make('Pendulum-v0')
+
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.shape[0]
+        action_bound = env.action_space.high
+
+        actor = ActorNetwork(sess, state_dim, action_dim, action_bound, ACTOR_LEARNING_RATE, TAU)
+
+        critic = CriticNetwork(sess, state_dim, action_dim, CRITIC_LEARNING_RATE, TAU,
+                               actor.get_num_trainable_vars())
+
+        # Initialize our Tensorflow variables
+        sess.run(tf.initialize_all_variables())
+
+        # Initialize target network weights
+        actor.update_target_network()
+        critic.update_target_network()
+
+        replay_buffer = ReplayMemory(10000)
+
+        for i in range(50000):
+            s = env.reset()
+
+            ep_reward = 0
+            terminal = False
+
+            while not terminal:
+                # Added exploration noise. In the literature, they use
+                # the Ornstein-Uhlenbeck stochastic process for control tasks
+                # that deal with momentum
+                a = actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
+
+                s2, r, terminal, info = env.step(a[0])
+                ep_reward += r
+
+                cur_sample = Sample(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r,
+                                    np.reshape(s2, (actor.s_dim,)), terminal)
+                replay_buffer.append(cur_sample)
+
+                # Keep adding experience to the memory until
+                # there are at least minibatch size samples
+                if replay_buffer.len() > MINIBATCH_SIZE:
+                    samples = replay_buffer.sample(MINIBATCH_SIZE)
+                    s_batch, a_batch, s2_batch, r_batch, t_batch = process_samples(samples, -1, False) 
+
+                    # Calculate targets
+                    target_q = critic.predict_target(s2_batch, actor.predict_target(s2_batch))
+
+                    y_i = []
+                    for k in range(MINIBATCH_SIZE):
+                        if t_batch[k]:
+                            y_i.append(r_batch[k])
+                        else:
+                            y_i.append(r_batch[k] + GAMMA * target_q[k])
+
+                    # Update the critic given the targets
+                    predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+
+                    # Update the actor policy using the sampled gradient
+                    a_outs = actor.predict(s_batch)
+                    grads = critic.action_gradients(s_batch, a_outs)
+                    actor.train(s_batch, grads[0])
+
+                    # Update target networks
+                    actor.update_target_network()
+                    critic.update_target_network()
+
+                if terminal:
+                    print('Reward at episode ', i)
+                    print(ep_reward)
+
+
+if __name__ == '__main__':
+    main()

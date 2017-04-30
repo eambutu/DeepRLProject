@@ -70,5 +70,5 @@ class ReplayMemory:
 
         return samples
 
-    def __len__(self):
+    def len(self):
         return len(self.cur_states)

@@ -24,10 +24,14 @@ def mean_squared_loss(x):
     return tf.reduce_mean(tf.square(x))
 
 
-def process_samples(samples, n):
+def process_samples(samples, n, action_discrete=True):
     s = np.array(list(map(lambda s: s.state, samples)))
     ns = np.array(list(map(lambda s: s.next_state, samples)))
     r = np.array(list(map(lambda s: s.reward, samples)))
-    a = np.array(list(map(lambda s: one_hot(s.action, n), samples)))
+    # If the actions aren't discrete, they are stored in replay buffer as vector
+    if action_discrete:
+        a = np.array(list(map(lambda s: one_hot(s.action, n), samples)))
+    else:
+        a = np.array(list(map(lambda s: s.action, samples)))
     t = np.array(list(map(lambda s: s.is_terminal, samples)))
     return (s, a, ns, r, t)
