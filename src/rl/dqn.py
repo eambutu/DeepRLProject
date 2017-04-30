@@ -13,13 +13,12 @@ TARGET_UPDATE_INTERVAL = 1
 TRAIN_INTERVAL = 1
 BATCH_SIZE = 32
 MEMORY_SIZE = 10000
-REPORT_INTERVAL = 1000
+REPORT_INTERVAL = 10
 
 
 def one_hot(a, n):
-    x = np.zeros(shape=(a.size, n))
-    for i in range(a.size):
-        x[i, a] = 1
+    x = np.zeros(shape=a.shape+(n,))
+    x[(range(len(a)), a)] = 1
     return x
 
 
@@ -33,7 +32,7 @@ def huber_loss(x, max_grad=1.):
 
 
 def mean_huber_loss(x, max_grad=1.):
-    return tf.reduce_mean(huber_loss(x, max_grad), axis=1)
+    return tf.reduce_mean(huber_loss(x, max_grad))
 
 
 def process_samples(samples, n):
@@ -123,7 +122,7 @@ class DQNAgent:
             assert (np.all(env.action_space.low == 0))
             assert (np.all(env.action_space.high == env.action_space.high[0]))
             self.n_actions = env.action_space.high[0] - env.action_space.low[0]
-            self.n_agents = env.action_space.size
+            self.n_agents = env.action_space.shape
             self.interact = self._multidiscrete_interact
         except AttributeError:  # Discrete
             self.n_actions = env.action_space.n
@@ -139,7 +138,7 @@ class DQNAgent:
             cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
             self.optimize_op = self.optimizer.minimize(cost, global_step=self.global_step)
             train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
-            avg_q = tf.reduce_mean(self.train_q, axis=-1)
+            avg_q = tf.reduce_mean(self.train_q)
 
         with tf.variable_scope("target_network"):
             self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
@@ -161,6 +160,8 @@ class DQNAgent:
 
     def _calc_q_update(self, ns, r, t):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
+        r = np.expand_dims(r, axis=1)
+        t = np.expand_dims(t, axis=1)
         return r + (1-t)*self.gamma*nq.max(axis=-1)
 
     def _select_action(self, s, policy):
@@ -217,6 +218,8 @@ class DQNAgent:
                 saver.restore(sess, checkpoint)
             else:
                 sess.run(init_op)
+            summarizer = tf.summary.FileWriter(self.save_dir + '/summary', self.sess.graph)
+            summarizer.flush()
 
             n_samples = 0
             n_updates = self._global_step()
@@ -243,6 +246,7 @@ class DQNAgent:
                             (b_s, b_a, b_ns, b_r, b_t) = \
                                 process_samples(batch, self.n_actions)
                             b_y = self._calc_q_update(b_ns, b_r, b_t)
+                            print(b_y)
                             n_updates = self._train_step(b_s, b_a, b_y)
                             self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
                             if (n_updates % self.target_update_interval == 0):

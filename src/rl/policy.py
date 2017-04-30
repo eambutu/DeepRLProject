@@ -3,8 +3,7 @@ import numpy as np
 
 class GreedyPolicy:
     def select_action(self, q_values):
-        n_agents = q_values.shape[0]
-        return np.argmax(q_values, size=n_agents)
+        return np.argmax(q_values, axis=-1)
 
 
 class GreedyEpsilonPolicy:
