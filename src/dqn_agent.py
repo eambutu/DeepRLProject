@@ -23,13 +23,14 @@ VIDEO_INTERVAL = 10000
 
 
 def single_agent_model(x, n_actions):
-    h1 = tflearn.fully_connected(x, 20, activation='relu')
-    out = tflearn.fully_connected(h1, n_actions)
-    return out
+    with tf.name_scope("single_agent"):
+        h1 = tflearn.fully_connected(x, 20, activation="relu")
+        out = tflearn.fully_connected(h1, n_actions)
+        return out
 
 
 def sequential_model(x, n_agents, n_actions):
-    qs = [single_agent_model(x, n_actions, 1)]
+    qs = [single_agent_model(x, n_actions)]
     smaxes = [tflearn.activations.softmax(qs[-1])]
 
     for i in range(1, n_agents):
@@ -39,8 +40,7 @@ def sequential_model(x, n_agents, n_actions):
 
         qs.append(single_agent_model(x_i, n_actions))
         smaxes.append(tflearn.activations.softmax(qs[-1]))
-
-    out = tf.stack(qs, axis=1)
+    out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
 
@@ -48,7 +48,7 @@ def parallel_model(x, n_agents, n_actions):
     qs = []
     for _ in range(n_agents):
         qs.append(single_agent_model(x, n_actions))
-    out = tf.stack(qs, axis=1)
+    out = tf.stack(qs, axis=1, name="qpred")
     return out
 
 
@@ -60,7 +60,7 @@ def sequential_message_model(x, n_agents, n_actions):
         should tune these numbers as we go.
     """
     # l1 is some hidden layer output that agent 1 gives
-    l1 = tflearn.fully_connected(x, 20, activation='relu')
+    l1 = tflearn.fully_connected(x, 20, activation="relu")
     q1 = tflearn.fully_connected(l1, n_actions)
 
     # the message passed from agent 1 to agent 2 is h1
@@ -74,7 +74,7 @@ def sequential_message_model(x, n_agents, n_actions):
         input_i = tf.stack([x, messages[i]], axis=1)
 
         # li is some hidden layer for agent i
-        li = tflearn.fully_connected(input_i, 20, activation='relu')
+        li = tflearn.fully_connected(input_i, 20, activation="relu")
         qi = tflearn.fully_connected(li, n_actions)
 
         # message from agent i+2 to agent i+3
@@ -87,8 +87,8 @@ def sequential_message_model(x, n_agents, n_actions):
     qn = single_agent_model(input_n, n_actions)
 
     qs.append(qn)
-    out = tf.stack(qs, axis=1)
 
+    out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
 
