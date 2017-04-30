@@ -59,6 +59,7 @@ class MagnetsEnv(Env):
         ''' variables that change with time '''
         self.state = State(num_agents, seed)
 
+        self.spec = None
         self.viewer = None
 
     def _reset(self):
