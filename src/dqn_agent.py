@@ -4,7 +4,6 @@ import argparse
 import gym
 from gym.wrappers import Monitor
 import tflearn
-import tensorflow as tf
 
 import rl.env # noqa : F401
 # the above registers the Magnets environment
@@ -23,20 +22,6 @@ def q_model(x, n):
     h1 = tflearn.fully_connected(x, 20, activation='relu')
     out = tflearn.fully_connected(h1, n)
     return out
-
-
-# our second baseline
-# n here is the number of actions for a single agent
-def q_model2(x, n=9, num_agents=3):
-    input_size = x.get_shape()[0]
-    offset = input_size / num_agents
-    outputs = []
-    for i in range(num_agents):
-        xi = tf.slice(x, [i * offset], [offset])
-        hi = tflearn.fully_connected(xi, 20, activation='relu')
-        out_i = tflearn.fully_connected(hi, n)
-        outputs.append(out_i)
-    return tf.concat(outputs, 0)
 
 
 if __name__ == '__main__':
