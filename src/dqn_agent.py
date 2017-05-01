@@ -30,14 +30,10 @@ def single_agent_model(x, n_actions):
 
 
 def sequential_model(x, n_agents, n_actions):
-    qs = [single_agent_model(x, n_actions)]
-    smaxes = [tflearn.activations.softmax(qs[-1])]
-
-    for i in range(1, n_agents):
-        smaxes.append(x)
-        x_i = tf.concat(smaxes, axis=1)
-        smaxes.remove(x)
-
+    qs = []
+    smaxes = []
+    for i in range(n_agents):
+        x_i = tf.concat(smaxes + [x], axis=1)
         qs.append(single_agent_model(x_i, n_actions))
         smaxes.append(tflearn.activations.softmax(qs[-1]))
 
