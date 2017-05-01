@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from rl.core import ReplayMemory, Sample
-from rl.utils import mean_huber_loss, mean_squared_loss, process_samples
+from rl.utils import mean_squared_loss, process_samples
 
 # default hyperparameters
 GAMMA = 0.9
@@ -40,11 +40,14 @@ class DQNAgent:
 
         Parameters
         ---------
+        env: gym.core.Env
+            the environment to use; must have a Discrete or MultiDiscrete
+            action space, where each agent has the same number of actions
+        q_network: (tf.Tensor, int, int) -> tf.Tensor
+            a function that generates your Q-network model, given an input
+            state tensor, the number of agents and the number of actions/agent
         memory: rl.core.ReplayMemory
             replay memory
-        q_network: (tf.Tensor, int) -> tf.Tensor
-            a function that generates your Q-network model, given an input
-            tensor and the size of the action space
         optimizer: tf.train.Optimizer
             optimizer to use when training
         loss: tf.Tensor -> tf.Tensor
@@ -86,20 +89,38 @@ class DQNAgent:
         # Tensorflow graph information
         self.sess = None
 
+        try:  # MultiDiscrete
+            # as of yet, we don't support agents having different numbers of
+            # actions, or actions not numbered from 0 to their max
+            assert (np.all(env.action_space.low == 0))
+            assert (np.all(env.action_space.high == env.action_space.high[0]))
+            self.n_actions = env.action_space.high[0] - env.action_space.low[0]
+            self.n_agents = env.action_space.shape
+            self.interact = self._multidiscrete_interact
+        except AttributeError:  # Discrete
+            self.n_actions = env.action_space.n
+            self.n_agents = 1
+            self.interact = self._discrete_interact
+
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
         with tf.variable_scope("train_network"):
-            self.train_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
-            self.train_a = tf.placeholder(tf.float32, (None, env.action_space.n))
-            self.train_y = tf.placeholder(tf.float32, (None,))
-            self.train_q = self.q_network(self.train_s, env.action_space.n)
-            cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1) - self.train_y)
+            self.train_s = tf.placeholder(tf.float32, (None,)+env.observation_space.shape,
+                                          name="state")
+            self.train_a = tf.placeholder(tf.float32, (None, self.n_agents, self.n_actions),
+                                          name="action")
+            self.train_y = tf.placeholder(tf.float32, (None, self.n_agents),
+                                          name="q_actual")
+            self.train_q = self.q_network(self.train_s, self.n_agents, self.n_actions)
+            with tf.name_scope("loss_func"):
+                cost = self.loss(tf.reduce_sum((self.train_q * self.train_a), axis=-1)-self.train_y)
             self.optimize_op = self.optimizer.minimize(cost, global_step=self.global_step)
             train_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="train_network")
-            avg_q = tf.reduce_mean(self.train_q)
+            avg_q = tf.reduce_mean(self.train_q, name="avg_q_pred")
 
         with tf.variable_scope("target_network"):
-            self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape)
-            self.target_q = self.q_network(self.target_s, env.action_space.n)
+            self.target_s = tf.placeholder(tf.float32, (None, ) + env.observation_space.shape,
+                                           name="state")
+            self.target_q = self.q_network(self.target_s, self.n_agents, self.n_actions)
             target_vars = tf.get_collection(tf.GraphKeys.MODEL_VARIABLES, scope="target_network")
             self.target_update_op = [
                 tf.assign(target_vars[i], train_vars[i]) for i in range(len(target_vars))
@@ -109,8 +130,16 @@ class DQNAgent:
         self.latest_metrics = [0.0, 0.0]
         self.metric_str = "loss: %f, average q value: %f"
 
+    def _multidiscrete_interact(self, action):
+        return self.env.step(action)
+
+    def _discrete_interact(self, action):
+        return self.env.step(np.asscalar(action))
+
     def _calc_q_update(self, ns, r, t):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
+        r = np.expand_dims(r, axis=1)
+        t = np.expand_dims(t, axis=1)
         return r + (1-t)*self.gamma*nq.max(axis=-1)
 
     def _select_action(self, s, policy):
@@ -167,6 +196,8 @@ class DQNAgent:
                 saver.restore(sess, checkpoint)
             else:
                 sess.run(init_op)
+            summarizer = tf.summary.FileWriter(self.save_dir + '/summary', self.sess.graph)
+            summarizer.flush()
 
             n_samples = 0
             n_updates = self._global_step()
@@ -177,7 +208,7 @@ class DQNAgent:
                 is_terminal = False
                 while (not is_terminal):
                     action = self._select_action(state, policy)
-                    next_state, reward, is_terminal, _ = self.env.step(action)
+                    next_state, reward, is_terminal, _ = self.interact(action)
                     episode_reward += reward
                     self.memory.append(Sample(
                         cur_state=state,
@@ -191,7 +222,7 @@ class DQNAgent:
                         if (n_samples % self.train_interval == 0):
                             batch = self.memory.sample(self.batch_size)
                             (b_s, b_a, b_ns, b_r, b_t) = \
-                                process_samples(batch, self.env.action_space.n)
+                                process_samples(batch, self.n_actions)
                             b_y = self._calc_q_update(b_ns, b_r, b_t)
                             n_updates = self._train_step(b_s, b_a, b_y)
                             self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
@@ -246,7 +277,7 @@ class DQNAgent:
                 episode_reward = 0
                 while (not is_terminal):
                     action = self._select_action(state, policy)
-                    next_state, reward, is_terminal, _ = self.env.step(action)
+                    next_state, reward, is_terminal, _ = self.interact(action)
                     episode_reward += reward
                     self.env.render()
                     state = next_state

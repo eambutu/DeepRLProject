@@ -3,14 +3,15 @@ import tensorflow as tf
 
 
 def one_hot(a, n):
-    x = np.zeros(n)
-    x[a] = 1
+    x = np.zeros(shape=a.shape+(n,))
+    x[(range(len(a)), a)] = 1
     return x
 
 
 def huber_loss(x, max_grad=1.):
     raw_loss = tf.abs(x)
-    return tf.maximum(
+    return tf.where(
+      tf.less(raw_loss, max_grad),
       tf.multiply(tf.square(raw_loss), 0.5),
       tf.subtract(tf.multiply(raw_loss, max_grad), 0.5*max_grad*max_grad)
     )

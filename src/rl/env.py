@@ -4,7 +4,7 @@ from collections import Iterable
 
 import numpy as np
 from gym import Env
-from gym.spaces import Discrete, Box
+from gym.spaces import MultiDiscrete, Discrete, Box
 from gym.envs.registration import register
 from PIL import Image, ImageDraw
 
@@ -49,7 +49,7 @@ class MagnetsEnv(Env):
         self.boundary_greater = boundary_greater
         self.num_agents = num_agents
 
-        self.action_space = Discrete(9**num_agents)
+        self.action_space = MultiDiscrete([[0, 8] for _ in range(num_agents)])
 
         # It's unclear what low and high here should be. Set them to 0 so
         # that if anyone tries to use them, it is more likely that obviously
@@ -66,13 +66,6 @@ class MagnetsEnv(Env):
         self.seed += 1
         self.state = State(self.num_agents, self.seed)
         return self.state.to_array()
-
-    def _action_scal2vec(self, action):
-        vec_action = np.zeros(self.num_agents)
-        for i in range(self.num_agents):
-            vec_action[i] = action % 9
-            action /= 9
-        return vec_action
 
     def _step(self, action):
         ''' evolve the state  '''
@@ -143,7 +136,6 @@ class MagnetsEnv(Env):
         draw.arc([0, 0, RENDER_WIDTH, RENDER_HEIGHT], 0, 360, fill=color)
 
     def _render(self, mode='human', close=False):
-
         img = Image.new('RGB', (RENDER_HEIGHT, RENDER_WIDTH), WHITE)
         draw = ImageDraw.Draw(img)
         for i in range(self.num_agents):
@@ -165,11 +157,22 @@ class MagnetsEnv(Env):
             return np.asarray(img)
 
 
-register(
-    id='Magnets1-v0',
-    entry_point='rl.env:MagnetsEnv',
-    kwargs={'num_agents': 1, 'friction': 2.0}
-)
+class SingleAgentMagnetsEnv(MagnetsEnv):
+    def __init__(self, *args, **kwargs):
+        super(SingleAgentMagnetsEnv, self).__init__(*args, **kwargs)
+        self.action_space = Discrete(9**self.num_agents)
+
+    def _action_scal2vec(self, action):
+        action = np.asscalar(action)
+        vec_action = np.zeros(self.num_agents)
+        for i in range(self.num_agents):
+            vec_action[i] = action % 9
+            action /= 9
+        return vec_action
+
+    def _step(self, action):
+        super(SingleAgentMagnetsEnv, self)._step(self._action_scal2vec(action))
+
 
 register(
     id='Magnets-v0',
@@ -177,9 +180,20 @@ register(
 )
 
 register(
-    id='Magnets2-v0',
+    id='Magnets1Player-v0',
+    entry_point='rl.env:MagnetsEnv',
+    kwargs={'num_agents': 1, 'friction': 2.0}
+)
+
+register(
+    id='Magnets2Player-v0',
     entry_point='rl.env:MagnetsEnv',
     kwargs={'num_agents': 2}
+)
+
+register(
+    id='Magnets-v1',
+    entry_point='rl.env:SingleAgentMagnetsEnv'
 )
 
 
