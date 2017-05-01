@@ -3,7 +3,7 @@ import numpy as np
 
 class GreedyPolicy:
     def select_action(self, q_values):
-        return np.argmax(q_values)
+        return np.argmax(q_values, axis=-1)
 
 
 class GreedyEpsilonPolicy:
@@ -12,12 +12,13 @@ class GreedyEpsilonPolicy:
         self.epsilon = epsilon
 
     def select_action(self, q_values):
-        n = len(q_values)
-        x = np.argmax(q_values)
+        n_agents = q_values.shape[0]
+        n = q_values.shape[-1]
+        x = np.argmax(q_values, axis=-1)
         if (np.random.binomial(1, self.epsilon) == 0):
             return x
         else:
-            return np.random.randint(n)
+            return np.random.randint(n, size=n_agents)
 
 
 class LinearDecayGreedyEpsilonPolicy:
@@ -28,26 +29,20 @@ class LinearDecayGreedyEpsilonPolicy:
         self.num_steps = num_steps
         self.cur_steps = 0
 
-    def select_action(self, q_values, is_training=True):
+    def select_action(self, q_values):
         eps = self.start_value + \
             min(1.0, float(self.cur_steps)/float(self.num_steps))\
             * (self.end_value - self.start_value)
 
-        n = len(q_values)
-        x = np.argmax(q_values)
+        n_agents = q_values.shape[0]
+        n = q_values.shape[-1]
+        x = np.argmax(q_values, axis=-1)
+        self.cur_steps += 1
 
-        if is_training:
-            self.cur_steps += 1
-
-            if (np.random.binomial(1, eps) == 0):
-                return x
-            else:
-                return np.random.randint(n)
+        if (np.random.binomial(1, eps) == 0):
+            return x
         else:
-            if (np.random.binomial(1, self.end_value) == 0):
-                return x
-            else:
-                return np.random.randint(n)
+            return np.random.randint(n, size=n_agents)
 
 
 class UniformRandomPolicy:
@@ -55,4 +50,6 @@ class UniformRandomPolicy:
         return
 
     def select_action(self, q_values):
-        return np.random.randint(len(q_values))
+        n_agents = q_values.shape[0]
+        n = q_values.shape[-1]
+        return np.random.randint(n, size=n_agents)
