@@ -69,9 +69,14 @@ def sequential_message_model(x, n_agents, n_actions):
     messages = [h1]
     qs = [q1]
 
+    print("Gets past the first agent")
+
     for i in range(n_agents - 2):
         # input_i is the message + state input
-        input_i = tf.stack([x, messages[i]], axis=1)
+        print(i, "Processing input")
+        input_i = tf.concat([x, messages[i]], axis=1)
+
+        print(i, "done stacking, passing through network")
 
         # li is some hidden layer for agent i
         li = tflearn.fully_connected(input_i, 20, activation="relu")
@@ -83,7 +88,7 @@ def sequential_message_model(x, n_agents, n_actions):
         messages.append(hi)
         qs.append(qi)
 
-    input_n = tf.stack([x, messages[n_agents-2]])
+    input_n = tf.concat([x, messages[n_agents-2]], axis=1)
     qn = single_agent_model(input_n, n_actions)
 
     qs.append(qn)
@@ -113,7 +118,8 @@ if __name__ == '__main__':
                         help='when using monitor, also store video')
     parser.add_argument('--iterations', default=None, type=int,
                         help='when evaluating, use the model trained for this many iterations')
-    parser.add_argument('--model', type=str, default='parallel', choices=['parallel', 'sequential'])
+    parser.add_argument('--model', type=str, default='parallel',
+                        choices=['parallel', 'sequential', 'message'])
 
     args = parser.parse_args()
 
@@ -126,6 +132,8 @@ if __name__ == '__main__':
         q_model = parallel_model
     elif (args.model == 'sequential'):
         q_model = sequential_model
+    elif (args.model == 'message'):
+        q_model = sequential_message_model
     else:
         print("unrecognized model %s" % args.model)
         parser.print_help()
