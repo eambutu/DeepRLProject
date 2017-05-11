@@ -30,10 +30,11 @@ def single_agent_model(x, n_actions):
 
 
 def better_single(x, n_agents, n_actions):
-    h1 = tflearn.fully_connected(x, 60, activation="relu")
+    h1 = tflearn.fully_connected(x, 100, activation="relu")
+    h2 = tflearn.fully_connected(x, 100, activation="relu")
     outs = []
     for i in range(n_agents):
-        outi = tflearn.fully_connected(h1, n_actions)
+        outi = tflearn.fully_connected(h2, n_actions)
         outs.append(outi)
     return tf.stack(outs, axis=1, name="q_pred")
 
@@ -69,11 +70,12 @@ def sequential_message_model(x, n_agents, n_actions):
         should tune these numbers as we go.
     """
     # l1 is some hidden layer output that agent 1 gives
-    l1 = tflearn.fully_connected(x, 20, activation="relu")
-    q1 = tflearn.fully_connected(l1, n_actions)
+    l1 = tflearn.fully_connected(x, 100, activation="relu")
+    l2 = tflearn.fully_connected(l1, 100, activation="relu")
+    q1 = tflearn.fully_connected(l2, n_actions)
 
     # the message passed from agent 1 to agent 2 is h1
-    h1 = tflearn.fully_connected(l1, n_actions)
+    h1 = tflearn.fully_connected(l2, n_actions)
 
     messages = [h1]
     qs = [q1]
@@ -88,11 +90,12 @@ def sequential_message_model(x, n_agents, n_actions):
         print(i, "done stacking, passing through network")
 
         # li is some hidden layer for agent i
-        li = tflearn.fully_connected(input_i, 25, activation="relu")
-        qi = tflearn.fully_connected(li, n_actions)
+        li = tflearn.fully_connected(input_i, 100, activation="relu")
+        li2 = tflearn.fully_connected(input_i, 100, activation="relu")
+        qi = tflearn.fully_connected(li2, n_actions)
 
         # message from agent i+2 to agent i+3
-        hi = tflearn.fully_connected(li, 2 * n_actions)
+        hi = tflearn.fully_connected(li2, 2 * n_actions)
 
         messages.append(hi)
         qs.append(qi)
