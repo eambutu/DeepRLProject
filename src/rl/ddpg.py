@@ -169,6 +169,7 @@ class CriticNetwork(object):
     def update_target_network(self):
         self.sess.run(self.update_target_network_params)
 
+
 def main():
     with tf.Session() as sess:
         env = gym.make('Pendulum-v0')

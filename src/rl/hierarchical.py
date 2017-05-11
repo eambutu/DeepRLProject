@@ -31,7 +31,7 @@ CRITIC_LEARNING_RATE = 0.001
 TAU = 0.01
 # Each entry in the goal vectors will be between [-ACTION_BOUND,
 # ACTION_BOUND] (do we even want this?)
-ACTION_BOUND = 100
+ACTION_BOUND = 40
 
 
 class HierarchicalAgent(DQNAgent):
@@ -107,8 +107,8 @@ class HierarchicalAgent(DQNAgent):
         # Rewrite these tensorflow placeholders because our dimensions are
         # different now
         with tf.variable_scope("train_network"):
-            # (posx, posy, velx, vely, posxtarget, posytarget,
-            # velxtarget, velytarget, goalx, goaly)
+            # (posxtarget, posytarget, velxtarget, velytarget, posx, posy, velx,
+            # vely, goalx, goaly)
             self.train_s = tf.placeholder(tf.float32, (None, 10), name="state")
 
             self.train_a = tf.placeholder(tf.float32, (None, self.n_actions), name="action")
@@ -137,13 +137,16 @@ class HierarchicalAgent(DQNAgent):
         # Get the state for the ith agent
         return np.concatenate([state[0:4], state[4*(i+1):4*(i+2)], goal[2*i:2*(i+1)]], axis=0)
 
-    def _select_action(self, s, goal, policy):
+    def _select_action(self, s, goal, policy, eval=False):
         action = []
         for i in range(self.num_agents):
             partial_info = self._get_sub_state(s, goal, i)
             partial_info = np.reshape(partial_info, (1, 10))
             q = self.sess.run(self.target_q, feed_dict={self.target_s: partial_info})[0]
-            action.append(policy.select_action(q, False))
+            if eval:
+                action.append(policy.select_action(q))
+            else:
+                action.append(policy.select_action(q, False))
         return np.array(action)
 
     def _calc_q_update(self, ns, r, t):
@@ -222,8 +225,6 @@ class HierarchicalAgent(DQNAgent):
                         n_samples += 1
                         sub_state = sub_next_state
 
-                    episode_reward += total_reward
-
                     self.metacontroller_memory.append(Sample(
                         cur_state=state,
                         action=goal,
@@ -232,7 +233,9 @@ class HierarchicalAgent(DQNAgent):
                         is_terminal=is_terminal
                     ))
 
-                    
+                    state = next_state
+                    episode_reward += total_reward
+
                     if (self.metacontroller_memory.len() > self.num_burn_in):
                         batch = self.metacontroller_memory.sample(self.batch_size)
                         (b_s, b_a, b_ns, b_r, b_t) = process_samples(batch, self.n_actions, False)
@@ -263,3 +266,39 @@ class HierarchicalAgent(DQNAgent):
 
                 n_episodes += 1
                 n_total_episodes += 1
+
+    def evaluate(self, policy, num_episodes, iterations=None):
+        if (iterations is None):
+            checkpoint = tf.train.latest_checkpoint(self.save_dir)
+        else:
+            checkpoint = "%s/model-%d" % (self.save_dir, iterations)
+
+        print(checkpoint)
+
+        saver = tf.train.Saver(max_to_keep=None)
+        with tf.Session() as sess:
+            self.sess = sess
+            self.actor.sess = self.sess
+            self.critic.sess = self.sess
+
+            saver.restore(sess, checkpoint)
+
+            samples = []
+            for i in range(num_episodes):
+                is_terminal = False
+                state = self.env.reset()
+                episode_reward = 0
+                while (not is_terminal):
+                    goal = self.actor.predict(np.reshape(state, (1, 16)))[0]
+                    number_sub_steps = 0
+                    while (not is_terminal) and number_sub_steps < NUM_SUB_STEPS:
+                        action = self._select_action(state, goal, policy, True)
+                        next_state, reward, is_terminal, _ = self.env.step(action)
+                        episode_reward += reward
+                        self.env.render()
+                        state = next_state
+                samples.append(episode_reward)
+
+        mean = sum(samples)/len(samples)
+        variance = sum(map(lambda x: x**2, samples))/len(samples) - (mean**2)
+        return (mean, variance)
