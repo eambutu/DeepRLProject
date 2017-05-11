@@ -10,6 +10,7 @@ import tflearn
 import rl.env # noqa : F401
 # the above registers the Magnets environment
 from rl.dqn import DQNAgent
+from rl.hierarchical import HierarchicalAgent
 from rl.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy
 
 TRAIN_STEPS = 5000000
@@ -71,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--iterations', default=None, type=int,
                         help='when evaluating, use the model trained for this many iterations')
     parser.add_argument('--model', type=str, default='parallel', choices=['parallel', 'sequential'])
+    parser.add_argument('--hierarch', default=False, action='store_true', help='hierarchical')
 
     args = parser.parse_args()
 
@@ -97,7 +99,10 @@ if __name__ == '__main__':
     if (args.monitor):
         env = Monitor(env, "%s/monitor" % args.name, video_callable=video_callable)
 
-    agent = DQNAgent(env, q_model, model_name=args.name)
+    if not args.hierarch:
+        agent = DQNAgent(env, q_model, model_name=args.name)
+    else:
+        agent = HierarchicalAgent(env, single_agent_model, 3, model_name=args.name) 
     train_policy = LinearDecayGreedyEpsilonPolicy(EPSILON_START, EPSILON_END, EPSILON_STEPS)
     test_policy = GreedyPolicy()
 

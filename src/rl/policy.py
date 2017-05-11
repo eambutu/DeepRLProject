@@ -11,14 +11,17 @@ class GreedyEpsilonPolicy:
         assert epsilon > 0 and epsilon < 1
         self.epsilon = epsilon
 
-    def select_action(self, q_values):
+    def select_action(self, q_values, multiple_agent=True):
         n_agents = q_values.shape[0]
         n = q_values.shape[-1]
         x = np.argmax(q_values, axis=-1)
         if (np.random.binomial(1, self.epsilon) == 0):
             return x
         else:
-            return np.random.randint(n, size=n_agents)
+            if multiple_agent:
+                return np.random.randint(n, size=n_agents)
+            else:
+                return np.random.randint(n)
 
 
 class LinearDecayGreedyEpsilonPolicy:
@@ -29,7 +32,7 @@ class LinearDecayGreedyEpsilonPolicy:
         self.num_steps = num_steps
         self.cur_steps = 0
 
-    def select_action(self, q_values):
+    def select_action(self, q_values, multiple_agent=True):
         eps = self.start_value + \
             min(1.0, float(self.cur_steps)/float(self.num_steps))\
             * (self.end_value - self.start_value)
@@ -42,14 +45,20 @@ class LinearDecayGreedyEpsilonPolicy:
         if (np.random.binomial(1, eps) == 0):
             return x
         else:
-            return np.random.randint(n, size=n_agents)
+            if multiple_agent:
+                return np.random.randint(n, size=n_agents)
+            else:
+                return np.random.randint(n)
 
 
 class UniformRandomPolicy:
     def __init__(self):
         return
 
-    def select_action(self, q_values):
+    def select_action(self, q_values, multiple_agent=True):
         n_agents = q_values.shape[0]
         n = q_values.shape[-1]
-        return np.random.randint(n, size=n_agents)
+        if multiple_agent:
+            return np.random.randint(n, size=n_agents)
+        else:
+            return np.random.randint(n)

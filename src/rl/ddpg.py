@@ -10,16 +10,16 @@ import numpy as np
 import tflearn
 import gym
 
-from core import ReplayMemory, Sample
-from utils import process_samples
+from rl.core import ReplayMemory, Sample
+from rl.utils import process_samples
 
 # Hyperparameters
 ACTOR_LEARNING_RATE = 0.0001
 CRITIC_LEARNING_RATE = 0.001
 # Discount factor
-GAMMA = 0.99
+GAMMA = 0.9
 # Soft target update
-TAU = 0.001
+TAU = 0.01
 MINIBATCH_SIZE = 64
 
 
