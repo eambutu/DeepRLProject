@@ -29,6 +29,15 @@ def single_agent_model(x, n_actions):
         return out
 
 
+def better_single(x, n_agents, n_actions):
+    h1 = tflearn.fully_connected(x, 60, activation="relu")
+    outs = []
+    for i in range(n_agents):
+        outi = tflearn.fully_connected(h1, n_actions)
+        outs.append(outi)
+    return tf.stack(outs, axis=1, name="q_pred")
+
+
 def sequential_model(x, n_agents, n_actions):
     qs = [single_agent_model(x, n_actions)]
     smaxes = [tflearn.activations.softmax(qs[-1])]
@@ -79,11 +88,11 @@ def sequential_message_model(x, n_agents, n_actions):
         print(i, "done stacking, passing through network")
 
         # li is some hidden layer for agent i
-        li = tflearn.fully_connected(input_i, 20, activation="relu")
+        li = tflearn.fully_connected(input_i, 25, activation="relu")
         qi = tflearn.fully_connected(li, n_actions)
 
         # message from agent i+2 to agent i+3
-        hi = tflearn.fully_connected(li, n_actions)
+        hi = tflearn.fully_connected(li, 2 * n_actions)
 
         messages.append(hi)
         qs.append(qi)
@@ -119,7 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--iterations', default=None, type=int,
                         help='when evaluating, use the model trained for this many iterations')
     parser.add_argument('--model', type=str, default='parallel',
-                        choices=['parallel', 'sequential', 'message'])
+                        choices=['parallel', 'sequential', 'message', 'better'])
 
     args = parser.parse_args()
 
@@ -134,6 +143,8 @@ if __name__ == '__main__':
         q_model = sequential_model
     elif (args.model == 'message'):
         q_model = sequential_message_model
+    elif (args.model == 'better'):
+        q_model = better_single
     else:
         print("unrecognized model %s" % args.model)
         parser.print_help()
