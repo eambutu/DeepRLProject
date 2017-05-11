@@ -188,8 +188,6 @@ class SubControllerMagnetsEnv(MagnetsEnv):
 
     def _step(self, action):
         ''' copy and pasted because i need to change the reward '''
-        print(action)
-
         pos_inc = self.state.target_state.vel * self.time_step
         self.state.target_state.pos += pos_inc
         total_acc = np.zeros(2)

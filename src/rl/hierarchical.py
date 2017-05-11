@@ -135,9 +135,6 @@ class HierarchicalAgent(DQNAgent):
 
     def _get_sub_state(self, state, goal, i):
         # Get the state for the ith agent
-        print(state[0:4])
-        print(state[4*(i+1):4*(i+2)])
-        print(goal[2*i:2*(i+1)])
         return np.concatenate([state[0:4], state[4*(i+1):4*(i+2)], goal[2*i:2*(i+1)]], axis=0)
 
     def _select_action(self, s, goal, policy):
@@ -146,10 +143,6 @@ class HierarchicalAgent(DQNAgent):
             partial_info = self._get_sub_state(s, goal, i)
             partial_info = np.reshape(partial_info, (1, 10))
             q = self.sess.run(self.target_q, feed_dict={self.target_s: partial_info})[0]
-            print("Q:")
-            print(q)
-            print("Selected by policy:")
-            print(policy.select_action(q, False))
             action.append(policy.select_action(q, False))
         return np.array(action)
 
@@ -178,10 +171,10 @@ class HierarchicalAgent(DQNAgent):
             n_samples = 0
             n_episodes = 0
             n_total_episodes = 0
-            episode_reward = 0  # keep track of this to see if we are learning
             while (n_total_episodes <= num_eps):
                 state = self.env.reset()
                 is_terminal = False
+                episode_reward = 0
                 while (not is_terminal):
                     goal = self.actor.predict(np.reshape(state, (1, 16)))[0]
 
@@ -195,8 +188,6 @@ class HierarchicalAgent(DQNAgent):
                         next_state, reward, _, _ = self.env.step(sub_action)
                         total_reward += reward
                         for i in range(self.n_agents):
-                            print("Is terminal: ")
-                            print(is_terminal)
                             self.memory.append(Sample(
                                 cur_state=self._get_sub_state(sub_state, goal, i),
                                 action=sub_action[i],
@@ -210,7 +201,6 @@ class HierarchicalAgent(DQNAgent):
                                 batch = self.memory.sample(self.batch_size)
                                 (b_s, b_a, b_ns, b_r, b_t) = \
                                     process_samples(batch, self.n_actions, multiple_agent=False)
-                                print(b_t)
                                 b_y = self._calc_q_update(b_ns, b_r, b_t)
                                 b_y = np.reshape(b_y, (32, 1))
                                 n_updates = self._train_step(b_s, b_a, b_y)
@@ -218,30 +208,31 @@ class HierarchicalAgent(DQNAgent):
                                 if (n_updates % self.target_update_interval == 0):
                                     self._sync_target_network()
 
-                            if (n_updates % self.report_interval == 0):
-                                avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
-                                print("reward/episode since last report: %f" % avg_reward)
-                                print(self.metric_str % tuple(self.latest_metrics))
-                                print("%d experiences sampled" % n_samples)
-                                print("%d updates performed" % n_updates)
-                                print("")
-                                saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
-                                n_episodes = 0
-                                episode_reward = 0
+                            # if (n_updates % self.report_interval == 0):
+                            #     avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
+                            #     print("reward/episode since last report: %f" % avg_reward)
+                            #     print(self.metric_str % tuple(self.latest_metrics))
+                            #     print("%d experiences sampled" % n_samples)
+                            #     print("%d updates performed" % n_updates)
+                            #     print("")
+                            #     saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
+                            #     n_episodes = 0
+                            #     episode_reward = 0
 
                         n_samples += 1
                         sub_state = sub_next_state
+
+                    episode_reward += total_reward
 
                     self.metacontroller_memory.append(Sample(
                         cur_state=state,
                         action=goal,
                         next_state=next_state,
-                        reward=reward,
+                        reward=total_reward,
                         is_terminal=is_terminal
                     ))
 
-                    episode_reward += reward
-
+                    
                     if (self.metacontroller_memory.len() > self.num_burn_in):
                         batch = self.metacontroller_memory.sample(self.batch_size)
                         (b_s, b_a, b_ns, b_r, b_t) = process_samples(batch, self.n_actions, False)
@@ -268,8 +259,7 @@ class HierarchicalAgent(DQNAgent):
                         self.actor.update_target_network()
                         self.critic.update_target_network()
 
-                print("Reward at episode %d: %d", n_total_episodes, episode_reward)
+                print("Reward at episode %d: %d" % (n_total_episodes, episode_reward))
 
-                episode_reward = 0
                 n_episodes += 1
                 n_total_episodes += 1
