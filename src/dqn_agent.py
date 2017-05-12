@@ -31,7 +31,7 @@ def single_agent_model(x, n_actions):
 
 def better_single(x, n_agents, n_actions):
     h1 = tflearn.fully_connected(x, 100, activation="relu")
-    h2 = tflearn.fully_connected(x, 100, activation="relu")
+    h2 = tflearn.fully_connected(h1, 100, activation="relu")
     outs = []
     for i in range(n_agents):
         outi = tflearn.fully_connected(h2, n_actions)
@@ -91,7 +91,7 @@ def sequential_message_model(x, n_agents, n_actions):
 
         # li is some hidden layer for agent i
         li = tflearn.fully_connected(input_i, 100, activation="relu")
-        li2 = tflearn.fully_connected(input_i, 100, activation="relu")
+        li2 = tflearn.fully_connected(li, 100, activation="relu")
         qi = tflearn.fully_connected(li2, n_actions)
 
         # message from agent i+2 to agent i+3
