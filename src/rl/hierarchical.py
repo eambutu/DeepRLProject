@@ -153,7 +153,7 @@ class HierarchicalAgent(DQNAgent):
         nq = self.sess.run(self.target_q, feed_dict={self.target_s: ns})
         return r + (1-t)*self.gamma*nq.max(axis=-1)
 
-    def train(self, policy, num_eps):
+    def train(self, policy, max_updates):
         init_op = tf.global_variables_initializer()
 
         saver = tf.train.Saver(max_to_keep=None)
@@ -173,8 +173,8 @@ class HierarchicalAgent(DQNAgent):
 
             n_samples = 0
             n_episodes = 0
-            n_total_episodes = 0
-            while (n_total_episodes <= num_eps):
+            num_updates = 0
+            while (num_updates <= max_updates):
                 state = self.env.reset()
                 is_terminal = False
                 episode_reward = 0
@@ -210,17 +210,6 @@ class HierarchicalAgent(DQNAgent):
                                 self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
                                 if (n_updates % self.target_update_interval == 0):
                                     self._sync_target_network()
-
-                            if (n_updates % self.report_interval == 0):
-                                saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
-                            #     avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
-                            #     print("reward/episode since last report: %f" % avg_reward)
-                            #     print(self.metric_str % tuple(self.latest_metrics))
-                            #     print("%d experiences sampled" % n_samples)
-                            #     print("%d updates performed" % n_updates)
-                            #     print("")
-                            #     n_episodes = 0
-                            #     episode_reward = 0
 
                         n_samples += 1
                         sub_state = sub_next_state
@@ -262,10 +251,13 @@ class HierarchicalAgent(DQNAgent):
                         self.actor.update_target_network()
                         self.critic.update_target_network()
 
-                print("Reward at episode %d: %d" % (n_total_episodes, episode_reward))
+                        num_updates += 1
+                        if (num_updates % REPORT_INTERVAL == 0):
+                            saver.save(sess, "%s/model" % self.save_dir, global_step=num_updates)
+
+                print("Reward at episode %d: %d" % (n_episodes, episode_reward))
 
                 n_episodes += 1
-                n_total_episodes += 1
 
     def evaluate(self, policy, num_episodes, iterations=None):
         if (iterations is None):
