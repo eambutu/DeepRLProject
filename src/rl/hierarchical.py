@@ -211,14 +211,14 @@ class HierarchicalAgent(DQNAgent):
                                 if (n_updates % self.target_update_interval == 0):
                                     self._sync_target_network()
 
-                            # if (n_updates % self.report_interval == 0):
+                            if (n_updates % self.report_interval == 0):
+                                saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
                             #     avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
                             #     print("reward/episode since last report: %f" % avg_reward)
                             #     print(self.metric_str % tuple(self.latest_metrics))
                             #     print("%d experiences sampled" % n_samples)
                             #     print("%d updates performed" % n_updates)
                             #     print("")
-                            #     saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
                             #     n_episodes = 0
                             #     episode_reward = 0
 
