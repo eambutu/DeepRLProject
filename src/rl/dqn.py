@@ -7,14 +7,14 @@ from rl.core import ReplayMemory, Sample
 from rl.utils import mean_squared_loss, process_samples
 
 # default hyperparameters
-GAMMA = 0.9
-ALPHA = 0.001
+GAMMA = 0.99
+ALPHA = 1e-3
 NUM_BURN_IN = 32
-TARGET_UPDATE_INTERVAL = 1
+TARGET_UPDATE_INTERVAL = 100
 TRAIN_INTERVAL = 1
 BATCH_SIZE = 32
 MEMORY_SIZE = 10000
-REPORT_INTERVAL = 10
+REPORT_INTERVAL = 1000
 
 
 class DQNAgent:
@@ -129,6 +129,7 @@ class DQNAgent:
         self.metrics = [cost, avg_q]
         self.latest_metrics = [0.0, 0.0]
         self.metric_str = "loss: %f, average q value: %f"
+        self.metric_tags = ["loss", "avg_q"]
 
     def _multidiscrete_interact(self, action):
         return self.env.step(action)
@@ -224,7 +225,6 @@ class DQNAgent:
                             (b_s, b_a, b_ns, b_r, b_t) = \
                                 process_samples(batch, self.n_actions)
                             b_y = self._calc_q_update(b_ns, b_r, b_t)
-                            print(b_y)
                             n_updates = self._train_step(b_s, b_a, b_y)
                             self.latest_metrics = self._calc_metrics(b_s, b_a, b_y)
                             if (n_updates % self.target_update_interval == 0):
@@ -237,9 +237,27 @@ class DQNAgent:
                             print("%d experiences sampled" % n_samples)
                             print("%d updates performed" % n_updates)
                             print("")
-                            saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
+
+                            for (i, metric) in enumerate(self.metrics):
+                                m_summary = tf.Summary()
+                                m_summary.value.add(
+                                    tag=self.metric_tags[i],
+                                    simple_value=self.latest_metrics[i]
+                                )
+                                summarizer.add_summary(m_summary, n_updates)
+                            reward_summary = tf.Summary()
+                            reward_summary.value.add(
+                                tag='avg_reward',
+                                simple_value=avg_reward
+                            )
+                            summarizer.add_summary(reward_summary, n_updates)
+
                             n_episodes = 0
                             episode_reward = 0
+
+                        if (n_updates % (self.report_interval*10) == 0):
+                            saver.save(sess, "%s/model" % self.save_dir, global_step=n_updates)
+                            summarizer.flush()
 
                     n_samples += 1
                     state = next_state

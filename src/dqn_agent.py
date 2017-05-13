@@ -30,8 +30,8 @@ def single_agent_model(x, n_actions):
 
 
 def better_single(x, n_agents, n_actions):
-    h1 = tflearn.fully_connected(x, 100, activation="relu")
-    h2 = tflearn.fully_connected(h1, 100, activation="relu")
+    h1 = tflearn.fully_connected(x, 20, activation="relu")
+    h2 = tflearn.fully_connected(h1, 20, activation="relu")
     outs = []
     for i in range(n_agents):
         outi = tflearn.fully_connected(h2, n_actions)
@@ -168,6 +168,7 @@ if __name__ == '__main__':
 
     if (args.train):
         agent.train(train_policy, TRAIN_STEPS)
+        env.close()
     if (args.run):
         (m, v) = agent.evaluate(test_policy, TEST_STEPS, args.iterations)
         print("mean: %f, variance: %f" % (m, v))
