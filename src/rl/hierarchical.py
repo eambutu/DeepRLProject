@@ -256,6 +256,13 @@ class HierarchicalAgent(DQNAgent):
                             saver.save(sess, "%s/model" % self.save_dir, global_step=num_updates)
 
                 print("Reward at episode %d: %d" % (n_episodes, episode_reward))
+                reward_summary = tf.Summary()
+                reward_summary.value.add(
+                    tag='avg_reward',
+                    simple_value=episode_reward
+                )
+                summarizer.add_summary(reward_summary, n_episodes)
+                summarizer.flush()
 
                 n_episodes += 1
 
