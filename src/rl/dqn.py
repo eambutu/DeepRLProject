@@ -231,7 +231,7 @@ class DQNAgent:
                                 self._sync_target_network()
 
                         if (n_updates % self.report_interval == 0):
-                            avg_reward = episode_reward/n_episodes if n_episodes != 0 else 0
+                            avg_reward = episode_reward/n_episodes if n_episodes != 0 else 999.0
                             print("reward/episode since last report: %f" % avg_reward)
                             print(self.metric_str % tuple(self.latest_metrics))
                             print("%d experiences sampled" % n_samples)
