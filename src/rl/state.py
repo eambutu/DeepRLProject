@@ -60,6 +60,19 @@ class State:
                                           self.agent_states[i].vel])
         return state_array
 
+    def from_array(self, array):
+        """
+        Given an array of form:
+        [target_pos[0], target_pos[1], target_vel[0], target_vel[1],
+         agent1_pos1[0], agent1_pos2[0], agent1_vel[0], agent1_vel[1], ...]
+        changes the state parameters
+        """
+        self.target_state = ObjState(array[0:2], array[2:4])
+        agent_states = []
+        for i in range(self.num_agents):
+            agent_states.append(ObjState(array[(4+4*i):(6+4*i)], array[(6+4*i):(8+4*i)]))
+        self.agent_states = agent_states
+
 
 def main():
     test_state = State(3, 29)

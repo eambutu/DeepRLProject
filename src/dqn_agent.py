@@ -10,6 +10,7 @@ import tflearn
 import rl.env # noqa : F401
 # the above registers the Magnets environment
 from rl.dqn import DQNAgent
+from rl.hierarchical import HierarchicalAgent
 from rl.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy
 
 TRAIN_STEPS = 5000000
@@ -40,14 +41,10 @@ def better_single(x, n_agents, n_actions):
 
 
 def sequential_model(x, n_agents, n_actions):
-    qs = [single_agent_model(x, n_actions)]
-    smaxes = [tflearn.activations.softmax(qs[-1])]
-
-    for i in range(1, n_agents):
-        smaxes.append(x)
-        x_i = tf.concat(smaxes, axis=1)
-        smaxes.remove(x)
-
+    qs = []
+    smaxes = []
+    for i in range(n_agents):
+        x_i = tf.concat(smaxes + [x], axis=1)
         qs.append(single_agent_model(x_i, n_actions))
         smaxes.append(tflearn.activations.softmax(qs[-1]))
     out = tf.stack(qs, axis=1, name="q_pred")
@@ -132,6 +129,7 @@ if __name__ == '__main__':
                         help='when evaluating, use the model trained for this many iterations')
     parser.add_argument('--model', type=str, default='parallel',
                         choices=['parallel', 'sequential', 'message', 'better'])
+    parser.add_argument('--hierarch', default=False, action='store_true', help='hierarchical')
 
     args = parser.parse_args()
 
@@ -162,7 +160,10 @@ if __name__ == '__main__':
     if (args.monitor):
         env = Monitor(env, "%s/monitor" % args.name, video_callable=video_callable)
 
-    agent = DQNAgent(env, q_model, model_name=args.name)
+    if not args.hierarch:
+        agent = DQNAgent(env, q_model, model_name=args.name)
+    else:
+        agent = HierarchicalAgent(env, single_agent_model, 3, model_name=args.name) 
     train_policy = LinearDecayGreedyEpsilonPolicy(EPSILON_START, EPSILON_END, EPSILON_STEPS)
     test_policy = GreedyPolicy()
 
