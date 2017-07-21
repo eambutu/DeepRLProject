@@ -25,9 +25,19 @@ VIDEO_INTERVAL = 10000
 
 def single_agent_model(x, n_actions):
     with tf.name_scope("single_agent"):
-        h1 = tflearn.fully_connected(x, 20, activation='relu')
+        h1 = tflearn.fully_connected(x, 20, activation="relu")
         out = tflearn.fully_connected(h1, n_actions)
         return out
+
+
+def better_single(x, n_agents, n_actions):
+    h1 = tflearn.fully_connected(x, 20, activation="relu")
+    h2 = tflearn.fully_connected(h1, 20, activation="relu")
+    outs = []
+    for i in range(n_agents):
+        outi = tflearn.fully_connected(h2, n_actions)
+        outs.append(outi)
+    return tf.stack(outs, axis=1, name="q_pred")
 
 
 def sequential_model(x, n_agents, n_actions):
@@ -37,7 +47,6 @@ def sequential_model(x, n_agents, n_actions):
         x_i = tf.concat(smaxes + [x], axis=1)
         qs.append(single_agent_model(x_i, n_actions))
         smaxes.append(tflearn.activations.softmax(qs[-1]))
-
     out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
@@ -46,6 +55,53 @@ def parallel_model(x, n_agents, n_actions):
     qs = []
     for _ in range(n_agents):
         qs.append(single_agent_model(x, n_actions))
+    out = tf.stack(qs, axis=1, name="qpred")
+    return out
+
+
+def sequential_message_model(x, n_agents, n_actions):
+    """ some notes:
+        some choices in network architecture are arbitrary. For example there
+        is no good reason for the number of units in the hidden layer to be 20.
+        Also, there is no good reason for the size of the message to be 9. We
+        should tune these numbers as we go.
+    """
+    # l1 is some hidden layer output that agent 1 gives
+    l1 = tflearn.fully_connected(x, 100, activation="relu")
+    l2 = tflearn.fully_connected(l1, 100, activation="relu")
+    q1 = tflearn.fully_connected(l2, n_actions)
+
+    # the message passed from agent 1 to agent 2 is h1
+    h1 = tflearn.fully_connected(l2, n_actions)
+
+    messages = [h1]
+    qs = [q1]
+
+    print("Gets past the first agent")
+
+    for i in range(n_agents - 2):
+        # input_i is the message + state input
+        print(i, "Processing input")
+        input_i = tf.concat([x, messages[i]], axis=1)
+
+        print(i, "done stacking, passing through network")
+
+        # li is some hidden layer for agent i
+        li = tflearn.fully_connected(input_i, 100, activation="relu")
+        li2 = tflearn.fully_connected(li, 100, activation="relu")
+        qi = tflearn.fully_connected(li2, n_actions)
+
+        # message from agent i+2 to agent i+3
+        hi = tflearn.fully_connected(li2, 2 * n_actions)
+
+        messages.append(hi)
+        qs.append(qi)
+
+    input_n = tf.concat([x, messages[n_agents-2]], axis=1)
+    qn = single_agent_model(input_n, n_actions)
+
+    qs.append(qn)
+
     out = tf.stack(qs, axis=1, name="q_pred")
     return out
 
@@ -71,7 +127,8 @@ if __name__ == '__main__':
                         help='when using monitor, also store video')
     parser.add_argument('--iterations', default=None, type=int,
                         help='when evaluating, use the model trained for this many iterations')
-    parser.add_argument('--model', type=str, default='parallel', choices=['parallel', 'sequential'])
+    parser.add_argument('--model', type=str, default='parallel',
+                        choices=['parallel', 'sequential', 'message', 'better'])
     parser.add_argument('--hierarch', default=False, action='store_true', help='hierarchical')
 
     args = parser.parse_args()
@@ -85,6 +142,10 @@ if __name__ == '__main__':
         q_model = parallel_model
     elif (args.model == 'sequential'):
         q_model = sequential_model
+    elif (args.model == 'message'):
+        q_model = sequential_message_model
+    elif (args.model == 'better'):
+        q_model = better_single
     else:
         print("unrecognized model %s" % args.model)
         parser.print_help()
@@ -108,6 +169,7 @@ if __name__ == '__main__':
 
     if (args.train):
         agent.train(train_policy, TRAIN_STEPS)
+        env.close()
     if (args.run):
         (m, v) = agent.evaluate(test_policy, TEST_STEPS, args.iterations)
         print("mean: %f, variance: %f" % (m, v))

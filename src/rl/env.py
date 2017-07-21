@@ -163,7 +163,6 @@ class SingleAgentMagnetsEnv(MagnetsEnv):
         self.action_space = Discrete(9**self.num_agents)
 
     def _action_scal2vec(self, action):
-        action = np.asscalar(action)
         vec_action = np.zeros(self.num_agents)
         for i in range(self.num_agents):
             vec_action[i] = action % 9
@@ -240,7 +239,7 @@ register(
 register(
     id='Magnets1Player-v0',
     entry_point='rl.env:MagnetsEnv',
-    kwargs={'num_agents': 1, 'friction': 2.0}
+    kwargs={'num_agents': 1, 'friction': 5.0}
 )
 
 register(
